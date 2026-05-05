@@ -1,0 +1,82 @@
+1° Município
+-Estado
+-Habitantes
+
+2° UBS
+-Nome
+-Endereço
+-Município
+
+3° Funcionários>
+-Nome
+-Cargo
+-Salario
+
+4° Produção>
+-Evento
+-QT de atendimento pelo evento
+
+(cada evento criado terá vinculado a ele uma quantidade de entendimento, as duas informações andam em paralelo) 
+
+5° Materiais de Consumo>
+*Material de Limpeza
+*Alimentos 
+*Material de escritório
+
+(Nome e quantidade em reais gasto)
+
+6° Insumos>
+*Medicamentos
+*Materiais de Enfermagem
+*Odontológicos
+*Medico Hospitalares
+
+(Nome e quantidade em reais gasto)
+
+7° Administrativos>
+*Agua
+*Luz
+*Telefone
+*Internet
+*Aluguel
+*Aluguel de Veículos
+*Combustível
+
+(Nome e quantidade em reais gasto)
+
+8° Terceirizados (Despesas com empresas terceirizadas que prestam serviço)>
+*Funcionários
+*Jardinagem
+*Segurança
+
+(Nome e quantidade em reais gasto)
+
+
+////////////////////////////////////////////////////////////////////////
+
+*Indicadores
+
+Total de UBS no município
+Total de atendimentos
+Atendimentos por UBS 
+Total de salários todos os funcionários de todas as UBS do município
+Custo médio por servidor
+Custo com pessoal por UBS
+Custo com pessoal por atendimento
+Distribuição de salários por cargo
+% pessoal sobre custo total da UBS
+% Material de Consumo sobre custo total da UBS
+% Insumos sobre custo total da UBS
+% serviços terceirizados sobre custo total da UBS
+Custo total por atendimento
+Custo total por UBS
+Custo per capita da saúde (todas as UBS) 
+Atendimentos per capita
+UBS por 10.000 habitantes
+Servidores de saúde por 10.000 habitantes
+
+
+
+
+
+
