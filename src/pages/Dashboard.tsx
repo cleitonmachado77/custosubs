@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { KpiCard } from '@/components/dashboard/KpiCard'
 import { ChartCard } from '@/components/dashboard/ChartCard'
+import { KpiExplainModal, type KpiExplain } from '@/components/dashboard/KpiExplainModal'
 import { getDashboardData, type DashboardData } from '@/services/dashboard'
 import { getMunicipios } from '@/services/municipios'
 import { formatCurrency } from '@/lib/utils'
@@ -96,6 +97,180 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
   const [loading, setLoading] = useState(false)
   const [loadingMun, setLoadingMun] = useState(true)
   const [error, setError] = useState('')
+  const [explain, setExplain] = useState<KpiExplain | null>(null)
+
+  // Monta a explicação de cada KPI com os dados atuais
+  function makeExplain(key: string): KpiExplain | null {
+    if (!data) return null
+    const hab = data.municipioHabitantes
+    const periodo = `${MESES_LABEL[data.mes]}/${data.ano}`
+
+    switch (key) {
+      case 'totalUbs':
+        return {
+          title: 'Total de UBS',
+          value: String(data.totalUbs),
+          formula: 'Contagem de UBS cadastradas no município',
+          steps: [
+            { label: 'Município', value: data.municipioNome },
+            { label: 'UBS cadastradas', value: String(data.totalUbs), highlight: true },
+          ],
+          note: 'Inclui todas as Unidades Básicas de Saúde vinculadas ao município, independente de terem lançamentos no período.',
+        }
+
+      case 'totalAtendimentos':
+        return {
+          title: 'Total de Atendimentos',
+          value: data.totalAtendimentos.toLocaleString('pt-BR'),
+          formula: 'Σ quantidade_atendimentos de todos os eventos de produção do período',
+          steps: [
+            { label: 'Período', value: periodo },
+            ...data.atendimentosPorUbs.map((u) => ({
+              label: u.nome,
+              value: u.total.toLocaleString('pt-BR'),
+            })),
+            { label: 'Total', value: data.totalAtendimentos.toLocaleString('pt-BR'), highlight: true },
+          ],
+          note: 'Soma de todos os atendimentos registrados nos eventos de produção de cada UBS no período selecionado.',
+        }
+
+      case 'servidores':
+        return {
+          title: 'Servidores',
+          value: String(data.totalFuncionarios),
+          formula: 'Contagem de funcionários lançados no período',
+          steps: [
+            { label: 'Período', value: periodo },
+            ...data.funcionariosPorVinculo.map((v) => ({
+              label: v.label,
+              value: `${v.quantidade} serv.`,
+            })),
+            { label: 'Total de servidores', value: String(data.totalFuncionarios), highlight: true },
+          ],
+          note: 'Contagem de todos os funcionários (Concursados, CLT e Terceirizados) lançados nas UBS do município no período.',
+        }
+
+      case 'ubsPor10k':
+        return {
+          title: 'UBS por 10 mil habitantes',
+          value: fmtNum(data.ubsPor10kHab),
+          formula: '(Total de UBS ÷ Habitantes) × 10.000',
+          steps: [
+            { label: 'Total de UBS', value: String(data.totalUbs) },
+            { label: 'Habitantes', value: hab.toLocaleString('pt-BR') },
+            { label: 'Cálculo', value: `(${data.totalUbs} ÷ ${hab.toLocaleString('pt-BR')}) × 10.000` },
+            { label: 'Resultado', value: fmtNum(data.ubsPor10kHab), highlight: true },
+          ],
+          note: 'Indica a cobertura territorial de UBS. A OMS recomenda ao menos 1 UBS por 3.000 a 4.000 habitantes (≈ 2,5 a 3,3 por 10 mil hab.).',
+        }
+
+      case 'serv10k':
+        return {
+          title: 'Servidores por 10 mil habitantes',
+          value: fmtNum(data.servidoresPor10kHab),
+          formula: '(Total de Servidores ÷ Habitantes) × 10.000',
+          steps: [
+            { label: 'Total de servidores', value: String(data.totalFuncionarios) },
+            { label: 'Habitantes', value: hab.toLocaleString('pt-BR') },
+            { label: 'Cálculo', value: `(${data.totalFuncionarios} ÷ ${hab.toLocaleString('pt-BR')}) × 10.000` },
+            { label: 'Resultado', value: fmtNum(data.servidoresPor10kHab), highlight: true },
+          ],
+          note: 'Mede a densidade de pessoal de saúde em relação à população. Útil para comparar a capacidade de atendimento entre municípios.',
+        }
+
+      case 'atendPerCapita':
+        return {
+          title: 'Atendimentos per capita',
+          value: fmtNum(data.atendimentosPerCapita, 3),
+          formula: 'Total de Atendimentos ÷ Habitantes',
+          steps: [
+            { label: 'Total de atendimentos', value: data.totalAtendimentos.toLocaleString('pt-BR') },
+            { label: 'Habitantes', value: hab.toLocaleString('pt-BR') },
+            { label: 'Cálculo', value: `${data.totalAtendimentos.toLocaleString('pt-BR')} ÷ ${hab.toLocaleString('pt-BR')}` },
+            { label: 'Resultado', value: fmtNum(data.atendimentosPerCapita, 4), highlight: true },
+          ],
+          note: 'Representa quantos atendimentos foram realizados por habitante no período. Valores próximos a 0,3–0,5 por mês indicam boa cobertura.',
+        }
+
+      case 'custoTotal':
+        return {
+          title: 'Custo Total',
+          value: fmtCur(data.custoTotal),
+          formula: 'Pessoal + Mat. Consumo + Insumos + Administrativo + Serv. Terceirizados',
+          steps: [
+            { label: 'Pessoal', value: fmtCur(data.custosPessoal) },
+            { label: 'Materiais de Consumo', value: fmtCur(data.custosMateriaisConsumo) },
+            { label: 'Insumos', value: fmtCur(data.custosInsumos) },
+            { label: 'Administrativo', value: fmtCur(data.custosAdministrativos) },
+            { label: 'Serv. Terceirizados', value: fmtCur(data.custosTerceirizados) },
+            { label: 'Total Geral', value: fmtCur(data.custoTotal), highlight: true },
+          ],
+          note: 'Soma de todas as categorias de custo lançadas para as UBS do município no período selecionado.',
+        }
+
+      case 'custoPorAtend':
+        return {
+          title: 'Custo por Atendimento',
+          value: data.totalAtendimentos > 0 ? fmtCur(data.custoPorAtendimento) : '—',
+          formula: 'Custo Total ÷ Total de Atendimentos',
+          steps: [
+            { label: 'Custo Total', value: fmtCur(data.custoTotal) },
+            { label: 'Total de atendimentos', value: data.totalAtendimentos.toLocaleString('pt-BR') },
+            { label: 'Cálculo', value: `${fmtCur(data.custoTotal)} ÷ ${data.totalAtendimentos.toLocaleString('pt-BR')}` },
+            { label: 'Resultado', value: data.totalAtendimentos > 0 ? fmtCur(data.custoPorAtendimento) : '—', highlight: true },
+          ],
+          note: 'Indica quanto custa, em média, cada atendimento realizado. É um dos principais indicadores de eficiência da atenção básica.',
+        }
+
+      case 'custoPerCapita':
+        return {
+          title: 'Custo per Capita',
+          value: fmtCur(data.custoPerCapita),
+          formula: 'Custo Total ÷ Habitantes',
+          steps: [
+            { label: 'Custo Total', value: fmtCur(data.custoTotal) },
+            { label: 'Habitantes', value: hab.toLocaleString('pt-BR') },
+            { label: 'Cálculo', value: `${fmtCur(data.custoTotal)} ÷ ${hab.toLocaleString('pt-BR')}` },
+            { label: 'Resultado', value: fmtCur(data.custoPerCapita), highlight: true },
+          ],
+          note: 'Representa o custo mensal de saúde básica por habitante. Permite comparar o investimento entre municípios de tamanhos diferentes.',
+        }
+
+      case 'totalSalarios':
+        return {
+          title: 'Total de Salários',
+          value: fmtCur(data.totalSalarios),
+          formula: 'Σ salários de todos os funcionários lançados no período',
+          steps: [
+            { label: 'Período', value: periodo },
+            ...data.funcionariosPorVinculo.map((v) => ({
+              label: `${v.label} (${v.quantidade} serv.)`,
+              value: fmtCur(v.totalSalarios),
+            })),
+            { label: 'Total de salários', value: fmtCur(data.totalSalarios), highlight: true },
+            { label: '% do custo total', value: `${fmtNum(data.pctPessoal, 1)}%` },
+          ],
+          note: 'Soma de todos os salários e custos de pessoal (Concursados, CLT e Terceirizados) lançados no período.',
+        }
+
+      case 'custoMedioServidor':
+        return {
+          title: 'Custo Médio por Servidor',
+          value: data.totalFuncionarios > 0 ? fmtCur(data.custoMedioPorServidor) : '—',
+          formula: 'Total de Salários ÷ Total de Servidores',
+          steps: [
+            { label: 'Total de salários', value: fmtCur(data.totalSalarios) },
+            { label: 'Total de servidores', value: String(data.totalFuncionarios) },
+            { label: 'Cálculo', value: `${fmtCur(data.totalSalarios)} ÷ ${data.totalFuncionarios}` },
+            { label: 'Resultado', value: data.totalFuncionarios > 0 ? fmtCur(data.custoMedioPorServidor) : '—', highlight: true },
+          ],
+          note: 'Salário médio dos servidores no período. Inclui todos os vínculos (Concursado, CLT, Terceirizado).',
+        }
+
+      default:
+        return null
+    }
+  }
 
   useEffect(() => {
     getMunicipios()
@@ -329,6 +504,8 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
         {/* Dashboard */}
         {data && !loading && (
           <>
+            {/* Modal de explicação */}
+            <KpiExplainModal explain={explain} onClose={() => setExplain(null)} />
             {/* Título do período */}
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
@@ -366,6 +543,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 subtitle="no município"
                 icon={<MapPin className="w-5 h-5" />}
                 color="blue"
+                onClick={() => setExplain(makeExplain('totalUbs'))}
               />
               <KpiCard
                 title="Total Atendimentos"
@@ -373,6 +551,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 subtitle={`${MESES_LABEL[data.mes]}/${data.ano}`}
                 icon={<Stethoscope className="w-5 h-5" />}
                 color="green"
+                onClick={() => setExplain(makeExplain('totalAtendimentos'))}
               />
               <KpiCard
                 title="Servidores"
@@ -380,6 +559,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 subtitle="funcionários ativos"
                 icon={<Users className="w-5 h-5" />}
                 color="indigo"
+                onClick={() => setExplain(makeExplain('servidores'))}
               />
               <KpiCard
                 title="UBS / 10k hab."
@@ -387,6 +567,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 subtitle="cobertura territorial"
                 icon={<Building2 className="w-5 h-5" />}
                 color="teal"
+                onClick={() => setExplain(makeExplain('ubsPor10k'))}
               />
               <KpiCard
                 title="Serv. / 10k hab."
@@ -394,6 +575,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 subtitle="densidade de pessoal"
                 icon={<Users className="w-5 h-5" />}
                 color="purple"
+                onClick={() => setExplain(makeExplain('serv10k'))}
               />
               <KpiCard
                 title="Atend. per capita"
@@ -401,6 +583,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 subtitle="atend. por habitante"
                 icon={<Activity className="w-5 h-5" />}
                 color="orange"
+                onClick={() => setExplain(makeExplain('atendPerCapita'))}
               />
             </div>
 
@@ -412,6 +595,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 subtitle="todas as UBS"
                 icon={<DollarSign className="w-5 h-5" />}
                 color="blue"
+                onClick={() => setExplain(makeExplain('custoTotal'))}
               />
               <KpiCard
                 title="Custo por Atend."
@@ -419,6 +603,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 subtitle="custo total ÷ atendimentos"
                 icon={<TrendingDown className="w-5 h-5" />}
                 color="green"
+                onClick={() => setExplain(makeExplain('custoPorAtend'))}
               />
               <KpiCard
                 title="Custo per Capita"
@@ -426,6 +611,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 subtitle="custo ÷ habitantes"
                 icon={<Users className="w-5 h-5" />}
                 color="indigo"
+                onClick={() => setExplain(makeExplain('custoPerCapita'))}
               />
               <KpiCard
                 title="Total Salários"
@@ -433,6 +619,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 subtitle={`${fmtNum(data.pctPessoal, 1)}% do custo total`}
                 icon={<DollarSign className="w-5 h-5" />}
                 color="orange"
+                onClick={() => setExplain(makeExplain('totalSalarios'))}
               />
               <KpiCard
                 title="Custo Médio/Servidor"
@@ -440,6 +627,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 subtitle="salário médio"
                 icon={<Users className="w-5 h-5" />}
                 color="purple"
+                onClick={() => setExplain(makeExplain('custoMedioServidor'))}
               />
             </div>
 

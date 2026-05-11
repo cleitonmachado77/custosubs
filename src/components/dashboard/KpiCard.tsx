@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { Info } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 interface KpiCardProps {
@@ -8,6 +9,7 @@ interface KpiCardProps {
   icon: ReactNode
   color: 'blue' | 'green' | 'indigo' | 'orange' | 'red' | 'teal' | 'purple'
   trend?: string
+  onClick?: () => void
 }
 
 const colorMap = {
@@ -20,10 +22,30 @@ const colorMap = {
   purple: { icon: 'bg-purple-600 text-white',  value: 'text-purple-700',  ring: 'ring-purple-100' },
 }
 
-export function KpiCard({ title, value, subtitle, icon, color, trend }: KpiCardProps) {
+export function KpiCard({ title, value, subtitle, icon, color, trend, onClick }: KpiCardProps) {
   const c = colorMap[color]
+  const clickable = !!onClick
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow duration-200">
+    <div
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={clickable ? (e) => e.key === 'Enter' && onClick?.() : undefined}
+      className={cn(
+        'relative bg-white rounded-2xl border border-gray-100 shadow-sm p-4 transition-all duration-200',
+        clickable
+          ? 'cursor-pointer hover:shadow-lg hover:border-gray-200 hover:-translate-y-0.5 group'
+          : 'hover:shadow-md'
+      )}
+    >
+      {/* Ícone de info — aparece no hover quando clicável */}
+      {clickable && (
+        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          <Info className="w-3.5 h-3.5 text-gray-300" />
+        </div>
+      )}
+
       {/* Ícone no topo */}
       <div
         className={cn(
@@ -34,20 +56,30 @@ export function KpiCard({ title, value, subtitle, icon, color, trend }: KpiCardP
       >
         {icon}
       </div>
+
       {/* Título */}
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide leading-snug mb-1">
         {title}
       </p>
+
       {/* Valor */}
       <p className={cn('text-xl font-bold leading-tight break-all', c.value)}>
         {value}
       </p>
+
       {/* Subtítulo */}
       {subtitle && (
         <p className="text-xs text-gray-400 mt-1 leading-snug">{subtitle}</p>
       )}
       {trend && (
         <p className="text-xs text-gray-500 mt-1">{trend}</p>
+      )}
+
+      {/* Hint "clique para detalhes" */}
+      {clickable && (
+        <p className="text-[10px] text-gray-300 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          Clique para ver o cálculo
+        </p>
       )}
     </div>
   )
