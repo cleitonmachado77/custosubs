@@ -11,7 +11,7 @@ export interface DashboardData {
 
   // UBS
   totalUbs: number
-  ubsLista: { id: string; nome: string }[]
+  ubsLista: { id: string; nome: string; cnes?: string | null }[]
 
   // Atendimentos
   totalAtendimentos: number
@@ -40,6 +40,14 @@ export interface DashboardData {
   totalFuncionarios: number
   totalSalarios: number
   salariosPorCargo: { cargo: string; total: number; quantidade: number }[]
+
+  // Distribuição por vínculo (novo)
+  funcionariosPorVinculo: {
+    vinculo: string
+    label: string
+    quantidade: number
+    totalSalarios: number
+  }[]
 
   // Indicadores calculados
   custoMedioPorServidor: number
@@ -73,7 +81,7 @@ export async function getDashboardData(
   // Busca todas as UBS do município
   const { data: ubsLista, error: errUbs } = await supabase
     .from('ubs')
-    .select('id, nome')
+    .select('id, nome, cnes')
     .eq('municipio_id', municipioId)
     .order('nome')
   if (errUbs) throw errUbs
@@ -184,6 +192,25 @@ export async function getDashboardData(
     .map(([cargo, v]) => ({ cargo, ...v }))
     .sort((a, b) => b.total - a.total)
 
+  // ── Distribuição por vínculo ──────────────────────────────────
+  const VINCULO_LABELS: Record<string, string> = {
+    concursado:   'Concursado',
+    clt:          'CLT',
+    terceirizado: 'Terceirizado',
+  }
+  const vinculoMap: Record<string, { quantidade: number; totalSalarios: number }> = {}
+  funcs.forEach((f) => {
+    const v = f.vinculo || 'concursado'
+    if (!vinculoMap[v]) vinculoMap[v] = { quantidade: 0, totalSalarios: 0 }
+    vinculoMap[v].quantidade += 1
+    vinculoMap[v].totalSalarios += Number(f.salario)
+  })
+  const funcionariosPorVinculo = Object.entries(vinculoMap).map(([vinculo, v]) => ({
+    vinculo,
+    label: VINCULO_LABELS[vinculo] ?? vinculo,
+    ...v,
+  })).sort((a, b) => b.quantidade - a.quantidade)
+
   // ── Indicadores ───────────────────────────────────────────────
   const hab = municipio.habitantes
   const custoMedioPorServidor = totalFuncionarios > 0 ? totalSalarios / totalFuncionarios : 0
@@ -216,6 +243,7 @@ export async function getDashboardData(
     totalFuncionarios,
     totalSalarios,
     salariosPorCargo,
+    funcionariosPorVinculo,
     custoMedioPorServidor,
     custoPorAtendimento,
     custoPerCapita,
@@ -242,7 +270,7 @@ function emptyDashboard(municipio: { id: string; nome: string; estado: string; h
     custosPessoal: 0, custosMateriaisConsumo: 0, custosInsumos: 0,
     custosAdministrativos: 0, custosTerceirizados: 0, custoTotal: 0,
     custosPorUbs: [], totalFuncionarios: 0, totalSalarios: 0,
-    salariosPorCargo: [], custoMedioPorServidor: 0, custoPorAtendimento: 0,
+    salariosPorCargo: [], funcionariosPorVinculo: [], custoMedioPorServidor: 0, custoPorAtendimento: 0,
     custoPerCapita: 0, atendimentosPerCapita: 0, ubsPor10kHab: 0,
     servidoresPor10kHab: 0, pctPessoal: 0, pctMateriais: 0,
     pctInsumos: 0, pctTerceirizados: 0, pctAdministrativo: 0,

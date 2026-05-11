@@ -1,6 +1,7 @@
 import './App.css'
 import { useState } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { LandingPage } from '@/pages/LandingPage'
 import { HomeMunicipios } from '@/pages/HomeMunicipios'
 import { MunicipioDetalhe } from '@/pages/MunicipioDetalhe'
 import { PainelLancamento } from '@/pages/PainelLancamento'
@@ -8,16 +9,26 @@ import { Dashboard } from '@/pages/Dashboard'
 import type { Municipio, UBS } from '@/types'
 
 type View =
+  | { screen: 'landing' }
   | { screen: 'home' }
   | { screen: 'municipio'; municipio: Municipio }
   | { screen: 'lancamento'; municipio: Municipio; ubs: UBS; mes: number; ano: number }
   | { screen: 'dashboard' }
 
 export default function App() {
-  const [view, setView] = useState<View>({ screen: 'dashboard' })
+  const [view, setView] = useState<View>({ screen: 'landing' })
 
   function handleNavigate(screen: 'home' | 'dashboard') {
     setView({ screen })
+  }
+
+  // Tela de entrada — sem sidebar
+  if (view.screen === 'landing') {
+    return (
+      <LandingPage
+        onEnterModule={() => setView({ screen: 'dashboard' })}
+      />
+    )
   }
 
   return (
@@ -25,6 +36,7 @@ export default function App() {
       <Sidebar
         activeScreen={view.screen}
         onNavigate={handleNavigate}
+        onBackToLanding={() => setView({ screen: 'landing' })}
       />
 
       <main className="app-main">

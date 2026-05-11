@@ -26,7 +26,15 @@ export async function upsertFuncionarios(
 
   if (funcionarios.length === 0) return
 
-  const rows = funcionarios.map((f) => ({ ...f, ubs_id: ubsId, mes, ano }))
+  const rows = funcionarios.map((f) => ({
+    nome: f.nome,
+    cargo: f.cargo,
+    vinculo: f.vinculo,
+    salario: f.salario,
+    ubs_id: ubsId,
+    mes,
+    ano,
+  }))
   const { error } = await supabase.from('funcionarios').insert(rows)
   if (error) throw error
 }
@@ -49,13 +57,20 @@ export async function upsertProducao(
   ubsId: string,
   mes: number,
   ano: number,
-  eventos: { evento: string; quantidade_atendimentos: number }[]
+  eventos: { evento: string; quantidade_atendimentos: number; responsaveis?: string[] }[]
 ): Promise<void> {
   await supabase.from('producao_eventos').delete().eq('ubs_id', ubsId).eq('mes', mes).eq('ano', ano)
 
   if (eventos.length === 0) return
 
-  const rows = eventos.map((e) => ({ ...e, ubs_id: ubsId, mes, ano }))
+  const rows = eventos.map((e) => ({
+    evento: e.evento,
+    quantidade_atendimentos: e.quantidade_atendimentos,
+    responsaveis: e.responsaveis && e.responsaveis.length > 0 ? e.responsaveis : null,
+    ubs_id: ubsId,
+    mes,
+    ano,
+  }))
   const { error } = await supabase.from('producao_eventos').insert(rows)
   if (error) throw error
 }
@@ -111,7 +126,7 @@ export interface LancamentoCompleto {
   mes: number
   ano: number
   funcionarios: Omit<Funcionario, 'id' | 'ubs_id' | 'created_at'>[]
-  producao: { evento: string; quantidade_atendimentos: number }[]
+  producao: { evento: string; quantidade_atendimentos: number; responsaveis?: string[] }[]
   materiais_consumo: { nome: string; valor: number }[]
   insumos: { nome: string; valor: number }[]
   administrativos: { nome: string; valor: number }[]
@@ -147,8 +162,12 @@ export async function getLancamentoCompleto(
     ])
 
   return {
-    funcionarios: funcionarios.map(({ nome, cargo, salario }) => ({ nome, cargo, salario })),
-    producao: producao.map(({ evento, quantidade_atendimentos }) => ({ evento, quantidade_atendimentos })),
+    funcionarios: funcionarios.map(({ nome, cargo, vinculo, salario }) => ({ nome, cargo, vinculo, salario })),
+    producao: producao.map(({ evento, quantidade_atendimentos, responsaveis }) => ({
+      evento,
+      quantidade_atendimentos,
+      responsaveis: responsaveis ?? [],
+    })),
     materiais_consumo: materiais.map(({ nome, valor }) => ({ nome, valor })),
     insumos: insumos.map(({ nome, valor }) => ({ nome, valor })),
     administrativos: administrativos.map(({ nome, valor }) => ({ nome, valor })),

@@ -13,17 +13,21 @@ export interface UBS {
   id: string
   nome: string
   endereco: string
+  cnes?: string | null
   municipio_id: string
   created_at?: string
   updated_at?: string
 }
 
 // ─── Funcionário ─────────────────────────────────────────────────────────────
+export type VinculoFuncionario = 'concursado' | 'clt' | 'terceirizado'
+
 export interface Funcionario {
   id: string
   ubs_id: string
   nome: string
   cargo: string
+  vinculo: VinculoFuncionario
   salario: number
   created_at?: string
 }
@@ -34,6 +38,7 @@ export interface ProducaoEvento {
   ubs_id: string
   evento: string
   quantidade_atendimentos: number
+  responsaveis?: string[] | null
   created_at?: string
 }
 

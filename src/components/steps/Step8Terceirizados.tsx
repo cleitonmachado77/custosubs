@@ -16,17 +16,28 @@ export function Step8Terceirizados({ items, onChange }: Step8Props) {
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Serviços Terceirizados</h2>
           <p className="text-sm text-gray-500">
-            Informe as despesas com empresas terceirizadas. Exemplos: Funcionários, Jardinagem, Segurança.
+            Custos com <strong>empresas prestadoras de serviço</strong>. Ex: empresa de limpeza,
+            segurança, manutenção, jardinagem.
           </p>
         </div>
       </div>
 
+      {/* Aviso de escopo */}
+      <div className="flex items-start gap-2 bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 text-sm text-teal-800">
+        <span className="text-base leading-none mt-0.5 shrink-0">ℹ️</span>
+        <p>
+          Esta seção é exclusiva para <strong>contratos com empresas</strong>. Funcionários
+          terceirizados (pessoa física) devem ser cadastrados na etapa de{' '}
+          <strong>Funcionários</strong> com o vínculo "Terceirizado".
+        </p>
+      </div>
+
       <DynamicItemList
-        title="Itens Terceirizados"
-        description="Adicione cada serviço terceirizado com o valor gasto no período"
+        title="Serviços de Empresas"
+        description="Adicione cada contrato ou serviço prestado por empresa terceirizada"
         items={items}
         onChange={onChange}
-        namePlaceholder="Ex: Empresa de Limpeza, Segurança..."
+        namePlaceholder="Ex: Empresa de Limpeza, Segurança, Manutenção..."
         colorClass="bg-teal-50 border-teal-100"
       />
     </div>

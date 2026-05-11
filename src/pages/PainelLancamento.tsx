@@ -7,7 +7,7 @@ import { Step3Funcionarios } from '@/components/steps/Step3Funcionarios'
 import { Step4Producao } from '@/components/steps/Step4Producao'
 import { Step5MateriaisConsumo } from '@/components/steps/Step5MateriaisConsumo'
 import { Step6Insumos } from '@/components/steps/Step6Insumos'
-import { Step7Administrativos } from '@/components/steps/Step7Administrativos'
+import { Step7Administrativos, garantirFixos } from '@/components/steps/Step7Administrativos'
 import { Step8Terceirizados } from '@/components/steps/Step8Terceirizados'
 import { salvarLancamentoCompleto, getLancamentoCompleto } from '@/services/lancamentos'
 import type { Municipio, UBS } from '@/types'
@@ -36,7 +36,7 @@ function getEmptyData() {
     producao: [] as ProducaoItem[],
     materiais_consumo: [] as CostItem[],
     insumos: [] as CostItem[],
-    administrativos: [] as CostItem[],
+    administrativos: garantirFixos([]),
     terceirizados: [] as CostItem[],
   }
 }
@@ -79,7 +79,7 @@ export function PainelLancamento({ municipio, ubs, mes, ano, onBack }: PainelLan
             producao: existente.producao as ProducaoItem[],
             materiais_consumo: existente.materiais_consumo as CostItem[],
             insumos: existente.insumos as CostItem[],
-            administrativos: existente.administrativos as CostItem[],
+            administrativos: garantirFixos(existente.administrativos as CostItem[]),
             terceirizados: existente.terceirizados as CostItem[],
           })
         }
@@ -109,6 +109,9 @@ export function PainelLancamento({ municipio, ubs, mes, ano, onBack }: PainelLan
     setSaving(true)
     setSaveError('')
     try {
+      // Remove a propriedade `fixed` antes de salvar (é apenas controle de UI)
+      const adminParaSalvar = data.administrativos.map(({ nome, valor }) => ({ nome, valor }))
+
       await salvarLancamentoCompleto({
         ubsId: ubs.id,
         mes,
@@ -117,7 +120,7 @@ export function PainelLancamento({ municipio, ubs, mes, ano, onBack }: PainelLan
         producao: data.producao,
         materiais_consumo: data.materiais_consumo,
         insumos: data.insumos,
-        administrativos: data.administrativos,
+        administrativos: adminParaSalvar,
         terceirizados: data.terceirizados,
       })
       markCompleted(STEPS.length)
@@ -284,6 +287,7 @@ export function PainelLancamento({ municipio, ubs, mes, ano, onBack }: PainelLan
                 <Step4Producao
                   producao={data.producao}
                   onChange={(items) => setData((d) => ({ ...d, producao: items }))}
+                  funcionarios={data.funcionarios}
                 />
               )}
               {currentStep === 3 && (

@@ -118,12 +118,24 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
 
   // Dados para gráfico de pizza (distribuição de custos)
   const pieData = data ? [
-    { name: 'Pessoal',        value: data.custosPessoal,          pct: data.pctPessoal },
-    { name: 'Mat. Consumo',   value: data.custosMateriaisConsumo, pct: data.pctMateriais },
-    { name: 'Insumos',        value: data.custosInsumos,          pct: data.pctInsumos },
-    { name: 'Administrativo', value: data.custosAdministrativos,  pct: 0 },
-    { name: 'Terceirizados',  value: data.custosTerceirizados,    pct: data.pctTerceirizados },
+    { name: 'Pessoal',           value: data.custosPessoal,          pct: data.pctPessoal },
+    { name: 'Mat. Consumo',      value: data.custosMateriaisConsumo, pct: data.pctMateriais },
+    { name: 'Insumos',           value: data.custosInsumos,          pct: data.pctInsumos },
+    { name: 'Administrativo',    value: data.custosAdministrativos,  pct: data.pctAdministrativo },
+    { name: 'Serv. Terceiriz.',  value: data.custosTerceirizados,    pct: data.pctTerceirizados },
   ].filter((d) => d.value > 0) : []
+
+  // Dados para gráfico de pizza — distribuição por vínculo
+  const VINCULO_CORES: Record<string, string> = {
+    concursado:   '#004aad',
+    clt:          '#f59e0b',
+    terceirizado: '#14b8a6',
+  }
+  const pieVinculo = data?.funcionariosPorVinculo.map((v) => ({
+    name: v.label,
+    value: v.quantidade,
+    vinculo: v.vinculo,
+  })) ?? []
 
   function exportarTxt() {
     if (!data) return
@@ -141,6 +153,10 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
 
     const salarios = data.salariosPorCargo.map((c) =>
       `  • ${c.cargo.padEnd(28)} ${fmtCur(c.total)} (${c.quantidade} serv.)`
+    ).join('\n')
+
+    const vinculos = data.funcionariosPorVinculo.map((v) =>
+      `  • ${v.label.padEnd(28)} ${v.quantidade} serv.  ${fmtCur(v.totalSalarios)}`
     ).join('\n')
 
     const txt = [
@@ -179,7 +195,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
       linha('Materiais de Consumo', `${fmtCur(data.custosMateriaisConsumo)}  (${fmtNum(data.pctMateriais, 1)}%)`),
       linha('Insumos', `${fmtCur(data.custosInsumos)}  (${fmtNum(data.pctInsumos, 1)}%)`),
       linha('Administrativo', `${fmtCur(data.custosAdministrativos)}  (${fmtNum(data.pctAdministrativo, 1)}%)`),
-      linha('Terceirizados', `${fmtCur(data.custosTerceirizados)}  (${fmtNum(data.pctTerceirizados, 1)}%)`),
+      linha('Serv. Terceirizados (empresas)', `${fmtCur(data.custosTerceirizados)}  (${fmtNum(data.pctTerceirizados, 1)}%)`),
       '',
       ...(data.custosPorUbs.length > 0 ? [
         sep,
@@ -200,6 +216,13 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
         '  SALÁRIOS POR CARGO',
         sep,
         salarios,
+        '',
+      ] : []),
+      ...(data.funcionariosPorVinculo.length > 0 ? [
+        sep,
+        '  SERVIDORES POR VÍNCULO',
+        sep,
+        vinculos,
         '',
       ] : []),
       sep,
@@ -516,11 +539,11 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                       <YAxis type="category" dataKey="nome" tick={{ fontSize: 11 }} width={130} />
                       <Tooltip content={<TooltipMoeda />} />
                       <Legend formatter={(v) => <span style={{ fontSize: 11, color: '#374151' }}>{v}</span>} />
-                      <Bar dataKey="pessoal"        name="Pessoal"        stackId="a" fill="#01884d" />
-                      <Bar dataKey="materiais"      name="Mat. Consumo"   stackId="a" fill="#004aad" />
-                      <Bar dataKey="insumos"        name="Insumos"        stackId="a" fill="#fce029" />
-                      <Bar dataKey="administrativo" name="Administrativo" stackId="a" fill="#ef4444" />
-                      <Bar dataKey="terceirizados"  name="Terceirizados"  stackId="a" fill="#14b8a6" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="pessoal"        name="Pessoal"           stackId="a" fill="#01884d" />
+                      <Bar dataKey="materiais"      name="Mat. Consumo"      stackId="a" fill="#004aad" />
+                      <Bar dataKey="insumos"        name="Insumos"           stackId="a" fill="#fce029" />
+                      <Bar dataKey="administrativo" name="Administrativo"    stackId="a" fill="#ef4444" />
+                      <Bar dataKey="terceirizados"  name="Serv. Terceiriz."  stackId="a" fill="#14b8a6" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -594,6 +617,70 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
               </ChartCard>
             )}
 
+            {/* ── Gráfico — Distribuição por Vínculo ───────────────── */}
+            {data.funcionariosPorVinculo.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ChartCard
+                  title="Servidores por Vínculo"
+                  subtitle="quantidade de funcionários por tipo de vínculo"
+                  minHeight="min-h-64"
+                >
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={pieVinculo}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={85}
+                        dataKey="value"
+                        labelLine={false}
+                        label={PieLabel as never}
+                      >
+                        {pieVinculo.map((entry, i) => (
+                          <Cell key={i} fill={VINCULO_CORES[entry.vinculo] ?? CORES_BARRAS[i]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(v) => [`${v} servidores`, 'Quantidade']}
+                        contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
+                      />
+                      <Legend formatter={(value) => <span style={{ fontSize: 12, color: '#374151' }}>{value}</span>} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+
+                <ChartCard
+                  title="Custo de Pessoal por Vínculo"
+                  subtitle="total de salários/custos por tipo de vínculo"
+                  minHeight="min-h-64"
+                >
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart
+                      data={data.funcionariosPorVinculo}
+                      layout="vertical"
+                      margin={{ top: 5, right: 80, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                      <XAxis type="number" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="label" tick={{ fontSize: 12 }} width={95} />
+                      <Tooltip content={<TooltipMoeda />} />
+                      <Bar dataKey="totalSalarios" name="Total Salários" radius={[0, 4, 4, 0]}>
+                        {data.funcionariosPorVinculo.map((entry, i) => (
+                          <Cell key={i} fill={VINCULO_CORES[entry.vinculo] ?? CORES_BARRAS[i]} />
+                        ))}
+                        <LabelList
+                          dataKey="quantidade"
+                          position="right"
+                          formatter={(v: unknown) => `${v} serv.`}
+                          style={{ fontSize: 11, fill: '#6b7280' }}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+              </div>
+            )}
+
             {/* ── Indicadores Consolidados ─────────────────────────── */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-50">
@@ -609,11 +696,11 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                   <div className="space-y-3">
                     {[
-                      { label: 'Pessoal',        pct: data.pctPessoal,        valor: data.custosPessoal,          cor: 'bg-[#01884d]'  },
-                      { label: 'Mat. Consumo',   pct: data.pctMateriais,      valor: data.custosMateriaisConsumo, cor: 'bg-[#004aad]'  },
-                      { label: 'Insumos',        pct: data.pctInsumos,        valor: data.custosInsumos,          cor: 'bg-yellow-400' },
-                      { label: 'Administrativo', pct: data.pctAdministrativo, valor: data.custosAdministrativos,  cor: 'bg-red-500'    },
-                      { label: 'Terceirizados',  pct: data.pctTerceirizados,  valor: data.custosTerceirizados,    cor: 'bg-teal-500'   },
+                      { label: 'Pessoal',           pct: data.pctPessoal,        valor: data.custosPessoal,          cor: 'bg-[#01884d]'  },
+                      { label: 'Mat. Consumo',      pct: data.pctMateriais,      valor: data.custosMateriaisConsumo, cor: 'bg-[#004aad]'  },
+                      { label: 'Insumos',           pct: data.pctInsumos,        valor: data.custosInsumos,          cor: 'bg-yellow-400' },
+                      { label: 'Administrativo',    pct: data.pctAdministrativo, valor: data.custosAdministrativos,  cor: 'bg-red-500'    },
+                      { label: 'Serv. Terceiriz.',  pct: data.pctTerceirizados,  valor: data.custosTerceirizados,    cor: 'bg-teal-500'   },
                     ].map((item) => (
                       <div key={item.label}>
                         <div className="flex items-center justify-between mb-1">
@@ -634,10 +721,10 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                       <BarChart layout="vertical"
                         data={[
                           { name: 'Pessoal',        pct: parseFloat(fmtNum(data.pctPessoal, 1).replace(',', '.')) },
-                          { name: 'Mat. Consumo',   pct: parseFloat(fmtNum(data.pctMateriais, 1).replace(',', '.')) },
-                          { name: 'Insumos',        pct: parseFloat(fmtNum(data.pctInsumos, 1).replace(',', '.')) },
-                          { name: 'Administrativo', pct: parseFloat(fmtNum(data.pctAdministrativo, 1).replace(',', '.')) },
-                          { name: 'Terceirizados',  pct: parseFloat(fmtNum(data.pctTerceirizados, 1).replace(',', '.')) },
+                          { name: 'Mat. Consumo',      pct: parseFloat(fmtNum(data.pctMateriais, 1).replace(',', '.')) },
+                          { name: 'Insumos',           pct: parseFloat(fmtNum(data.pctInsumos, 1).replace(',', '.')) },
+                          { name: 'Administrativo',    pct: parseFloat(fmtNum(data.pctAdministrativo, 1).replace(',', '.')) },
+                          { name: 'Serv. Terceiriz.',  pct: parseFloat(fmtNum(data.pctTerceirizados, 1).replace(',', '.')) },
                         ].filter((d) => d.pct > 0)}
                         margin={{ top: 0, right: 50, left: 90, bottom: 0 }}
                       >

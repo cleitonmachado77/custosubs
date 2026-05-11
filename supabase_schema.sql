@@ -19,6 +19,7 @@ create table if not exists ubs (
   id           uuid primary key default gen_random_uuid(),
   nome         text not null,
   endereco     text not null,
+  cnes         varchar(7) check (cnes ~ '^\d{7}$'),
   municipio_id uuid not null references municipios(id) on delete cascade,
   created_at   timestamptz default now(),
   updated_at   timestamptz default now()
@@ -30,6 +31,7 @@ create table if not exists funcionarios (
   ubs_id     uuid not null references ubs(id) on delete cascade,
   nome       text not null,
   cargo      text not null,
+  vinculo    text not null default 'concursado' check (vinculo in ('concursado','clt','terceirizado')),
   salario    numeric(12,2) not null check (salario >= 0),
   mes        integer not null check (mes between 1 and 12),
   ano        integer not null check (ano >= 2000),
@@ -42,6 +44,7 @@ create table if not exists producao_eventos (
   ubs_id                   uuid not null references ubs(id) on delete cascade,
   evento                   text not null,
   quantidade_atendimentos  integer not null check (quantidade_atendimentos >= 0),
+  responsaveis             text[],   -- nomes dos funcionários vinculados (opcional)
   mes                      integer not null check (mes between 1 and 12),
   ano                      integer not null check (ano >= 2000),
   created_at               timestamptz default now()
@@ -61,6 +64,15 @@ create table if not exists itens_custo (
   ano        integer not null check (ano >= 2000),
   created_at timestamptz default now()
 );
+
+-- ─── Migração: adicionar coluna cnes (execute se a tabela já existir) ────────
+-- alter table ubs add column if not exists cnes varchar(7) check (cnes ~ '^\d{7}$');
+
+-- ─── Migração: adicionar coluna vinculo em funcionarios ───────────────────────
+-- alter table funcionarios add column if not exists vinculo text not null default 'concursado' check (vinculo in ('concursado','clt','terceirizado'));
+
+-- ─── Migração: adicionar coluna responsaveis (execute se a tabela já existir) ─
+-- alter table producao_eventos add column if not exists responsaveis text[];
 
 -- ─── Índices ──────────────────────────────────────────────────
 create index if not exists idx_ubs_municipio       on ubs(municipio_id);

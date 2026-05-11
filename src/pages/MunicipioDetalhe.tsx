@@ -195,6 +195,7 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
   // Criar UBS
   const [nome, setNome] = useState('')
   const [endereco, setEndereco] = useState('')
+  const [cnes, setCnes] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -202,6 +203,7 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
   const [editandoUbsId, setEditandoUbsId] = useState<string | null>(null)
   const [editNome, setEditNome] = useState('')
   const [editEndereco, setEditEndereco] = useState('')
+  const [editCnes, setEditCnes] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
   const [editError, setEditError] = useState('')
 
@@ -224,13 +226,20 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
   async function handleCreate() {
     if (!nome.trim()) { setError('Informe o nome da UBS.'); return }
     if (!endereco.trim()) { setError('Informe o endereço.'); return }
+    if (cnes && !/^\d{7}$/.test(cnes.trim())) { setError('O CNES deve ter exatamente 7 dígitos numéricos.'); return }
     setSaving(true)
     setError('')
     try {
-      const nova = await createUBS({ nome: nome.trim(), endereco: endereco.trim(), municipio_id: municipio.id })
+      const nova = await createUBS({
+        nome: nome.trim(),
+        endereco: endereco.trim(),
+        cnes: cnes.trim() || null,
+        municipio_id: municipio.id,
+      })
       setShowForm(false)
       setNome('')
       setEndereco('')
+      setCnes('')
       setUbsList((prev) => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)))
     } catch {
       setError('Erro ao salvar. Tente novamente.')
@@ -243,6 +252,7 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
     setEditandoUbsId(ubs.id)
     setEditNome(ubs.nome)
     setEditEndereco(ubs.endereco)
+    setEditCnes(ubs.cnes ?? '')
     setEditError('')
     setConfirmDeleteUbsId(null)
   }
@@ -251,16 +261,22 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
     setEditandoUbsId(null)
     setEditNome('')
     setEditEndereco('')
+    setEditCnes('')
     setEditError('')
   }
 
   async function salvarEdicaoUbs(ubs: UBS) {
     if (!editNome.trim()) { setEditError('Informe o nome.'); return }
     if (!editEndereco.trim()) { setEditError('Informe o endereço.'); return }
+    if (editCnes && !/^\d{7}$/.test(editCnes.trim())) { setEditError('O CNES deve ter exatamente 7 dígitos numéricos.'); return }
     setSavingEdit(true)
     setEditError('')
     try {
-      const atualizada = await updateUBS(ubs.id, { nome: editNome.trim(), endereco: editEndereco.trim() })
+      const atualizada = await updateUBS(ubs.id, {
+        nome: editNome.trim(),
+        endereco: editEndereco.trim(),
+        cnes: editCnes.trim() || null,
+      })
       setUbsList((prev) => prev.map((u) => u.id === ubs.id ? atualizada : u))
       cancelarEdicaoUbs()
     } catch {
@@ -360,13 +376,21 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
                   </div>
                   <h3 className="font-bold text-gray-800">Cadastrar UBS</h3>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Input label="Nome da UBS" required value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: UBS Centro, UBS Vila Nova..." />
                   <Input label="Endereço" required value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Rua, número, bairro..." />
+                  <Input
+                    label="CNES"
+                    value={cnes}
+                    onChange={(e) => setCnes(e.target.value.replace(/\D/g, '').slice(0, 7))}
+                    placeholder="7 dígitos"
+                    inputMode="numeric"
+                    maxLength={7}
+                  />
                 </div>
                 {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>}
                 <div className="flex gap-2 pt-1">
-                  <Button variant="ghost" onClick={() => { setShowForm(false); setError('') }} type="button">Cancelar</Button>
+                  <Button variant="ghost" onClick={() => { setShowForm(false); setNome(''); setEndereco(''); setCnes(''); setError('') }} type="button">Cancelar</Button>
                   <Button onClick={handleCreate} loading={saving} type="button">Salvar UBS</Button>
                 </div>
               </div>
@@ -412,6 +436,11 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
                         <div className="min-w-0">
                           <p className="font-bold text-gray-900 truncate">{ubs.nome}</p>
                           <p className="text-sm text-gray-500 truncate mt-0.5">{ubs.endereco}</p>
+                          {ubs.cnes && (
+                            <p className="text-xs text-[#004aad] font-medium mt-0.5">
+                              CNES: {ubs.cnes}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -449,7 +478,7 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
                     {isEditando && (
                       <div className="px-5 pb-4 border-t border-gray-100 pt-3">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Editar dados da UBS</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                           <Input
                             label="Nome da UBS"
                             value={editNome}
@@ -460,6 +489,14 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
                             label="Endereço"
                             value={editEndereco}
                             onChange={(e) => setEditEndereco(e.target.value)}
+                          />
+                          <Input
+                            label="CNES"
+                            value={editCnes}
+                            onChange={(e) => setEditCnes(e.target.value.replace(/\D/g, '').slice(0, 7))}
+                            placeholder="7 dígitos"
+                            inputMode="numeric"
+                            maxLength={7}
                           />
                         </div>
                         {editError && <p className="text-xs text-red-600 mb-2">{editError}</p>}
