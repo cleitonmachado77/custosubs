@@ -1,0 +1,6 @@
+export { EduApp } from './EduApp'
+export { EduLandingPage } from './EduLandingPage'
+export { EduDashboard } from './EduDashboard'
+export { EduHomeMunicipios } from './EduHomeMunicipios'
+export { EduMunicipioDetalhe } from './EduMunicipioDetalhe'
+export { EduPainelLancamento } from './EduPainelLancamento'

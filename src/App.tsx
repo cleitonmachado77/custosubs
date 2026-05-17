@@ -7,6 +7,7 @@ import { MunicipioDetalhe } from '@/pages/MunicipioDetalhe'
 import { PainelLancamento } from '@/pages/PainelLancamento'
 import { Dashboard } from '@/pages/Dashboard'
 import { ImportarExcel } from '@/pages/ImportarExcel'
+import { EduApp } from '@/pages/educacao/EduApp'
 import type { Municipio, UBS } from '@/types'
 
 type View =
@@ -16,6 +17,7 @@ type View =
   | { screen: 'lancamento'; municipio: Municipio; ubs: UBS; mes: number; ano: number }
   | { screen: 'dashboard' }
   | { screen: 'importar' }
+  | { screen: 'educacao' }
 
 export default function App() {
   const [view, setView] = useState<View>({ screen: 'landing' })
@@ -28,8 +30,18 @@ export default function App() {
   if (view.screen === 'landing') {
     return (
       <LandingPage
-        onEnterModule={() => setView({ screen: 'dashboard' })}
+        onEnterModule={(module) => {
+          if (module === 'saude') setView({ screen: 'dashboard' })
+          else if (module === 'educacao') setView({ screen: 'educacao' })
+        }}
       />
+    )
+  }
+
+  // Módulo Educação — layout próprio
+  if (view.screen === 'educacao') {
+    return (
+      <EduApp onBackToLanding={() => setView({ screen: 'landing' })} />
     )
   }
 

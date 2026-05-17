@@ -277,7 +277,15 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
     getMunicipios()
       .then((lista) => {
         setMunicipios(lista)
-        if (lista.length === 1) setMunicipioId(lista[0].id)
+        if (lista.length === 1) {
+          setMunicipioId(lista[0].id)
+        } else if (lista.length > 1) {
+          // Seleciona o município com updated_at mais recente
+          const sorted = [...lista].sort((a, b) =>
+            (b.updated_at ?? b.created_at ?? '').localeCompare(a.updated_at ?? a.created_at ?? '')
+          )
+          setMunicipioId(sorted[0].id)
+        }
       })
       .finally(() => setLoadingMun(false))
   }, [])
