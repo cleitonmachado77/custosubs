@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { getEduDashboardData, type EduDashboardData } from '@/services/educacao-dashboard'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList, LineChart, Line, ScatterChart, Scatter, ZAxis } from 'recharts'
 import { GraduationCap, Users, DollarSign, School, BookOpen, TrendingUp, UserCheck, Building2, Download, Target, Activity } from 'lucide-react'
+import { KpiExplainModal, type KpiExplain } from '@/components/dashboard/KpiExplainModal'
 import type { Municipio } from '@/types'
 
 interface EduDashboardProps {
@@ -43,6 +44,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
   const [data, setData] = useState<EduDashboardData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [explain, setExplain] = useState<KpiExplain | null>(null)
 
   // Carrega municípios
   useEffect(() => {
@@ -173,6 +175,34 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
     URL.revokeObjectURL(url)
   }
 
+  function makeExplain(key: string): KpiExplain | null {
+    if (!data) return null
+    switch (key) {
+      case 'escolas':
+        return { title: 'Total de Escolas', value: String(data.totalEscolas), formula: 'Contagem de escolas cadastradas no município', steps: [{ label: 'Município', value: data.municipioNome }, { label: 'Escolas cadastradas', value: String(data.totalEscolas), highlight: true }], note: 'Inclui todas as escolas municipais vinculadas, independente de terem lançamentos no período.' }
+      case 'alunos':
+        return { title: 'Total de Alunos', value: data.totalAlunos.toLocaleString('pt-BR'), formula: 'Σ num_alunos de todas as escolas do município', steps: [...data.escolasLista.map((e) => ({ label: e.nome, value: `${e.num_alunos} alunos` })), { label: 'Total', value: data.totalAlunos.toLocaleString('pt-BR'), highlight: true }], note: 'Soma do número de alunos matriculados em todas as escolas cadastradas. Fonte: Censo Escolar / cadastro municipal.' }
+      case 'custoTotal':
+        return { title: 'Custo Total', value: formatCurrency(data.custoTotal), formula: 'Custo Pedagógico + Custo Social + Custo Administrativo + Material + Merenda + Despesas Fixas + Terceirizados', steps: [{ label: 'Pedagógico (pessoal)', value: formatCurrency(data.custoPedagogico) }, { label: 'Social (pessoal)', value: formatCurrency(data.custoSocial) }, { label: 'Administrativo (pessoal)', value: formatCurrency(data.custoAdministrativo) }, { label: 'Material Pedagógico', value: formatCurrency(data.custoMaterialPedagogico) }, { label: 'Merenda', value: formatCurrency(data.custoMerenda) }, { label: 'Despesas Fixas', value: formatCurrency(data.custoDespesasFixas) }, { label: 'Terceirizados', value: formatCurrency(data.custoTerceirizados) }, { label: 'Total', value: formatCurrency(data.custoTotal), highlight: true }], note: 'Metodologia baseada em Amâncio-Vieira et al. (2015): custos diretos divididos em Pedagógico, Social e Administrativo. Referência: Dissertações NIGEP/UEL (Capucho, 2019; Spiri, 2018).' }
+      case 'custoAluno':
+        return { title: 'Custo Mensal por Aluno', value: formatCurrency(data.custoMedioPorAluno), formula: 'Custo Total ÷ Total de Alunos', steps: [{ label: 'Custo Total', value: formatCurrency(data.custoTotal) }, { label: 'Total de Alunos', value: data.totalAlunos.toLocaleString('pt-BR') }, { label: 'Resultado', value: formatCurrency(data.custoMedioPorAluno), highlight: true }], note: 'Indicador principal das pesquisas de custos educacionais. Em Londrina/PR (2017), o custo médio por aluno representava 66,2% do salário mínimo (Spiri, 2018).' }
+      case 'custoPedAluno':
+        return { title: 'Custo Pedagógico por Aluno', value: formatCurrency(data.custoPedagogicoPorAluno), formula: '(Salários Professores + Material Pedagógico) ÷ Total de Alunos', steps: [{ label: 'Salários Professores', value: formatCurrency(data.custoPedagogico) }, { label: 'Material Pedagógico', value: formatCurrency(data.custoMaterialPedagogico) }, { label: 'Total Alunos', value: data.totalAlunos.toLocaleString('pt-BR') }, { label: 'Resultado', value: formatCurrency(data.custoPedagogicoPorAluno), highlight: true }, { label: '% do custo total', value: `${formatNumber(data.pctPedagogico)}%` }], note: 'Composto pela remuneração dos professores (salário + 13º + férias) e material de consumo pedagógico. Tipicamente representa 60-80% do custo total (Borinelli et al., 2014; Lima et al., 2016).' }
+      case 'custoSocAluno':
+        return { title: 'Custo Social por Aluno', value: formatCurrency(data.custoSocialPorAluno), formula: '(Salários Cozinha + Gêneros Alimentícios) ÷ Total de Alunos', steps: [{ label: 'Pessoal Cozinha', value: formatCurrency(data.custoSocial) }, { label: 'Merenda (alimentos)', value: formatCurrency(data.custoMerenda) }, { label: 'Total Alunos', value: data.totalAlunos.toLocaleString('pt-BR') }, { label: 'Resultado', value: formatCurrency(data.custoSocialPorAluno), highlight: true }, { label: '% do custo total', value: `${formatNumber(data.pctSocial)}%` }], note: 'Composto pela mão de obra de cozinha e gêneros alimentícios da merenda escolar. Em Alvorada do Sul/PR, o custo social chegou a ser o maior devido ao transporte (Oliveira et al., 2014).' }
+      case 'custoAdmAluno':
+        return { title: 'Custo Administrativo por Aluno', value: formatCurrency(data.custoAdministrativoPorAluno), formula: '(Salários Adm. + Despesas Fixas + Terceirizados) ÷ Total de Alunos', steps: [{ label: 'Pessoal Administrativo', value: formatCurrency(data.custoAdministrativo) }, { label: 'Despesas Fixas', value: formatCurrency(data.custoDespesasFixas) }, { label: 'Terceirizados', value: formatCurrency(data.custoTerceirizados) }, { label: 'Total Alunos', value: data.totalAlunos.toLocaleString('pt-BR') }, { label: 'Resultado', value: formatCurrency(data.custoAdministrativoPorAluno), highlight: true }, { label: '% do custo total', value: `${formatNumber(data.pctAdministrativo)}%` }], note: 'Inclui zeladores, secretários, vigias, energia, água, internet e serviços terceirizados. Geralmente é a menor categoria (Amâncio-Vieira et al., 2015).' }
+      case 'alunoProf':
+        return { title: 'Relação Aluno/Professor', value: formatNumber(data.relacaoAlunoProfessor), formula: 'Total de Alunos ÷ Total de Professores', steps: [{ label: 'Total de Alunos', value: data.totalAlunos.toLocaleString('pt-BR') }, { label: 'Total de Professores', value: String(data.totalProfessores) }, { label: 'Resultado', value: formatNumber(data.relacaoAlunoProfessor), highlight: true }], note: 'Indicador de estrutura escolar. Rivkin, Hanushek e Kain (2005) estudaram a relação entre número de professores por aluno e desempenho escolar. Valores menores indicam turmas menores.' }
+      case 'custoSM':
+        return { title: 'Custo/Aluno vs Salário Mínimo', value: `${formatNumber(data.custoAlunoPctSalarioMinimo)}%`, formula: '(Custo por Aluno ÷ Salário Mínimo) × 100', steps: [{ label: 'Custo por Aluno', value: formatCurrency(data.custoMedioPorAluno) }, { label: 'Salário Mínimo (2026)', value: 'R$ 1.518,00' }, { label: 'Resultado', value: `${formatNumber(data.custoAlunoPctSalarioMinimo)}%`, highlight: true }], note: 'Em Londrina/PR, o custo por aluno representava 58,6% do SM em 2011 e subiu para 66,2% em 2017 (Spiri, 2018). Indica o peso do investimento educacional em relação ao piso salarial nacional.' }
+      case 'cv':
+        return { title: 'Coeficiente de Variação', value: `${formatNumber(data.cvCustos)}%`, formula: '(Desvio Padrão dos Custos/Aluno ÷ Média) × 100', steps: [{ label: 'Classificação', value: data.cvCustos < 15 ? 'Baixo (homogêneo)' : data.cvCustos < 30 ? 'Médio' : 'Alto (heterogêneo)', highlight: true }], note: 'Segundo Gomes (1990): CV < 15% = baixa variação; 15-30% = média; > 30% = alta. Indica se os custos entre escolas são homogêneos ou se há grande disparidade na alocação de recursos.' }
+      default:
+        return null
+    }
+  }
+
   return (
     <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-6">
       {/* Header */}
@@ -252,6 +282,9 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
 
       {data && !loading && (
         <>
+          {/* Modal de explicação */}
+          <KpiExplainModal explain={explain} onClose={() => setExplain(null)} />
+
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <KpiCard
@@ -259,24 +292,28 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
               label="Escolas"
               value={data.totalEscolas.toString()}
               color="#1066C6"
+              onClick={() => setExplain(makeExplain('escolas'))}
             />
             <KpiCard
               icon={<Users className="w-5 h-5" />}
               label="Total de Alunos"
               value={data.totalAlunos.toLocaleString('pt-BR')}
               color="#1B93ED"
+              onClick={() => setExplain(makeExplain('alunos'))}
             />
             <KpiCard
               icon={<DollarSign className="w-5 h-5" />}
               label="Custo Total"
               value={formatCurrency(data.custoTotal)}
               color="#072F76"
+              onClick={() => setExplain(makeExplain('custoTotal'))}
             />
             <KpiCard
               icon={<TrendingUp className="w-5 h-5" />}
               label="Custo/Aluno (mês)"
               value={formatCurrency(data.custoMedioPorAluno)}
               color="#1066C6"
+              onClick={() => setExplain(makeExplain('custoAluno'))}
             />
           </div>
 
@@ -288,6 +325,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
               value={formatCurrency(data.custoPedagogicoPorAluno)}
               subtitle={`${formatNumber(data.pctPedagogico)}% do total`}
               color="#1066C6"
+              onClick={() => setExplain(makeExplain('custoPedAluno'))}
             />
             <KpiCard
               icon={<UserCheck className="w-5 h-5" />}
@@ -295,6 +333,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
               value={formatCurrency(data.custoSocialPorAluno)}
               subtitle={`${formatNumber(data.pctSocial)}% do total`}
               color="#1B93ED"
+              onClick={() => setExplain(makeExplain('custoSocAluno'))}
             />
             <KpiCard
               icon={<Building2 className="w-5 h-5" />}
@@ -302,6 +341,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
               value={formatCurrency(data.custoAdministrativoPorAluno)}
               subtitle={`${formatNumber(data.pctAdministrativo)}% do total`}
               color="#072F76"
+              onClick={() => setExplain(makeExplain('custoAdmAluno'))}
             />
             <KpiCard
               icon={<Users className="w-5 h-5" />}
@@ -309,6 +349,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
               value={formatNumber(data.relacaoAlunoProfessor)}
               subtitle={`${data.totalProfessores} professores`}
               color="#1B93ED"
+              onClick={() => setExplain(makeExplain('alunoProf'))}
             />
           </div>
 
@@ -524,6 +565,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
               value={`${formatNumber(data.custoAlunoPctSalarioMinimo)}%`}
               subtitle={`${formatCurrency(data.custoMedioPorAluno)} de R$ 1.518,00`}
               color="#072F76"
+              onClick={() => setExplain(makeExplain('custoSM'))}
             />
             <KpiCard
               icon={<Activity className="w-5 h-5" />}
@@ -531,6 +573,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
               value={`${formatNumber(data.cvCustos)}%`}
               subtitle={data.cvCustos < 15 ? 'Baixa dispersão (homogêneo)' : data.cvCustos < 30 ? 'Média dispersão' : 'Alta dispersão'}
               color="#1B93ED"
+              onClick={() => setExplain(makeExplain('cv'))}
             />
             <KpiCard
               icon={<Target className="w-5 h-5" />}
@@ -763,15 +806,25 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
 }
 
 // ─── KPI Card Component ──────────────────────────────────────────────────────
-function KpiCard({ icon, label, value, subtitle, color }: {
+function KpiCard({ icon, label, value, subtitle, color, onClick }: {
   icon: React.ReactNode
   label: string
   value: string
   subtitle?: string
   color: string
+  onClick?: () => void
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
+      className={[
+        'bg-white rounded-xl border border-gray-200 p-4 shadow-sm transition-all',
+        onClick ? 'cursor-pointer hover:shadow-lg hover:border-[#1066C6]/30 hover:-translate-y-0.5 group' : 'hover:shadow-md',
+      ].join(' ')}
+    >
       <div className="flex items-center gap-3">
         <div
           className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
@@ -785,6 +838,11 @@ function KpiCard({ icon, label, value, subtitle, color }: {
           {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
         </div>
       </div>
+      {onClick && (
+        <p className="text-[10px] text-gray-300 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          Clique para ver o cálculo
+        </p>
+      )}
     </div>
   )
 }
