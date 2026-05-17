@@ -1,5 +1,4 @@
 import * as XLSX from 'xlsx'
-import { supabase } from '@/lib/supabase'
 import type { VinculoFuncionario } from '@/types'
 import { salvarLancamentoCompleto } from './lancamentos'
 
@@ -107,7 +106,7 @@ export function validateImport(data: ReturnType<typeof parseExcel>): ImportError
     if (isNaN(salario) || salario < 0) {
       errors.push({ aba: 'Funcionarios', linha, campo: 'salario', mensagem: 'Salário deve ser um número >= 0' })
     }
-    if (f.equipe !== undefined && f.equipe !== '' && f.equipe !== null) {
+    if (f.equipe !== undefined && f.equipe !== null && String(f.equipe).trim() !== '') {
       const eq = Number(f.equipe)
       if (isNaN(eq) || eq < 0 || !Number.isInteger(eq)) {
         errors.push({ aba: 'Funcionarios', linha, campo: 'equipe', mensagem: 'Equipe deve ser um número inteiro >= 0' })

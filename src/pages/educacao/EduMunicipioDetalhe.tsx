@@ -21,7 +21,6 @@ export function EduMunicipioDetalhe({ municipio, onBack, onLancar }: EduMunicipi
   const [escolas, setEscolas] = useState<Escola[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [selectedEscola, setSelectedEscola] = useState<Escola | null>(null)
   const [mes, setMes] = useState(new Date().getMonth() + 1)
   const [ano, setAno] = useState(new Date().getFullYear())
 

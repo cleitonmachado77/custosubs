@@ -35,7 +35,7 @@ function formatNumber(value: number, decimals = 1) {
   return value.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
 }
 
-export function EduDashboard({ onBack }: EduDashboardProps) {
+export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
   const [municipios, setMunicipios] = useState<Municipio[]>([])
   const [selectedMunicipio, setSelectedMunicipio] = useState('')
   const [ano, setAno] = useState(new Date().getFullYear())

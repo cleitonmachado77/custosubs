@@ -28,12 +28,6 @@ interface ItemRow {
 
 const MESES = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
-const TIPO_CUSTO_LABELS: Record<TipoCustoFuncionario, string> = {
-  pedagogico: 'Pedagógico (Professor)',
-  social: 'Social (Cozinha/Merenda)',
-  administrativo: 'Administrativo',
-}
-
 const CATEGORIA_LABELS: Record<CategoriaEduCusto, string> = {
   material_pedagogico: 'Material Pedagógico',
   merenda: 'Merenda (Gêneros Alimentícios)',

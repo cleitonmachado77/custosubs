@@ -1,4 +1,4 @@
-import { Activity, BookOpen, ChevronLeft, FileSpreadsheet, GraduationCap, LayoutDashboard, MapPin } from 'lucide-react'
+import { Activity, ChevronLeft, FileSpreadsheet, GraduationCap, LayoutDashboard, MapPin } from 'lucide-react'
 import logoEdu from '/SICM2.png'
 
 export type EduScreen = 'edu-home' | 'edu-municipio' | 'edu-lancamento' | 'edu-dashboard' | 'edu-importar'

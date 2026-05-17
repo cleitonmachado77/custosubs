@@ -227,7 +227,7 @@ export async function getDashboardData(
   // ── Serviços disponíveis ──────────────────────────────────────
   const servicoCount: Record<string, number> = {}
   ;(ubsLista ?? []).forEach((u) => {
-    (u.servicos ?? []).forEach((s) => {
+    (u.servicos ?? []).forEach((s: string) => {
       servicoCount[s] = (servicoCount[s] || 0) + 1
     })
   })
