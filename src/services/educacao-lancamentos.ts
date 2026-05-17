@@ -1,6 +1,56 @@
 import { supabase } from '@/lib/supabase'
 import type { EduFuncionario, EduItemCusto, TipoCustoFuncionario, VinculoEdu, CategoriaEduCusto } from '@/types/educacao'
 
+// ─── Períodos Lançados ───────────────────────────────────────────────────────
+
+export interface EduPeriodoLancado {
+  mes: number
+  ano: number
+  totalFuncionarios: number
+  totalCusto: number
+}
+
+export async function getEduPeriodosLancados(escolaId: string): Promise<EduPeriodoLancado[]> {
+  const [funcionarios, itens] = await Promise.all([
+    supabase.from('edu_funcionarios').select('mes, ano, salario').eq('escola_id', escolaId),
+    supabase.from('edu_itens_custo').select('mes, ano, valor').eq('escola_id', escolaId),
+  ])
+
+  const map = new Map<string, EduPeriodoLancado>()
+
+  const key = (mes: number, ano: number) => `${ano}-${String(mes).padStart(2, '0')}`
+  const get = (mes: number, ano: number): EduPeriodoLancado => {
+    const k = key(mes, ano)
+    if (!map.has(k)) map.set(k, { mes, ano, totalFuncionarios: 0, totalCusto: 0 })
+    return map.get(k)!
+  }
+
+  for (const r of funcionarios.data ?? []) {
+    const p = get(r.mes, r.ano)
+    p.totalFuncionarios += 1
+    p.totalCusto += Number(r.salario) ?? 0
+  }
+  for (const r of itens.data ?? []) {
+    const p = get(r.mes, r.ano)
+    p.totalCusto += Number(r.valor) ?? 0
+  }
+
+  return Array.from(map.values()).sort((a, b) =>
+    b.ano !== a.ano ? b.ano - a.ano : b.mes - a.mes
+  )
+}
+
+export async function deleteEduLancamentoCompleto(
+  escolaId: string,
+  mes: number,
+  ano: number
+): Promise<void> {
+  await Promise.all([
+    supabase.from('edu_funcionarios').delete().eq('escola_id', escolaId).eq('mes', mes).eq('ano', ano),
+    supabase.from('edu_itens_custo').delete().eq('escola_id', escolaId).eq('mes', mes).eq('ano', ano),
+  ])
+}
+
 // ─── Funcionários ────────────────────────────────────────────────────────────
 
 export async function getEduFuncionarios(escolaId: string, mes: number, ano: number): Promise<EduFuncionario[]> {

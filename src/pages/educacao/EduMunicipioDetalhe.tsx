@@ -1,14 +1,33 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, GraduationCap, MapPin, Plus, School, Trash2, Users } from 'lucide-react'
+import {
+  AlertTriangle, ArrowLeft, Calendar, ChevronDown, ChevronRight, ChevronUp,
+  GraduationCap, Pencil, Plus, School, Trash2, Users,
+} from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import type { Municipio } from '@/types'
 import type { Escola, NivelEnsino, ZonaEscola } from '@/types/educacao'
 import { getEscolasByMunicipio, createEscola, deleteEscola } from '@/services/escolas'
+import {
+  getEduPeriodosLancados,
+  deleteEduLancamentoCompleto,
+  type EduPeriodoLancado,
+} from '@/services/educacao-lancamentos'
+import { formatCurrency } from '@/lib/utils'
 
-interface EduMunicipioDetalheProps {
-  municipio: Municipio
-  onBack: () => void
-  onLancar: (escola: Escola, mes: number, ano: number) => void
-}
+const MESES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
+
+const currentYear = new Date().getFullYear()
+const ANOS_OPTIONS = Array.from({ length: 6 }, (_, i) => {
+  const y = currentYear - i
+  return { value: String(y), label: String(y) }
+})
+const MESES_OPTIONS = MESES.map((m, i) => ({ value: String(i + 1), label: m }))
 
 const NIVEL_LABELS: Record<NivelEnsino, string> = {
   infantil: 'Educação Infantil',
@@ -17,291 +36,485 @@ const NIVEL_LABELS: Record<NivelEnsino, string> = {
   medio: 'Ensino Médio',
 }
 
+interface EduMunicipioDetalheProps {
+  municipio: Municipio
+  onBack: () => void
+  onLancar: (escola: Escola, mes: number, ano: number) => void
+}
+
+// ─── Histórico de lançamentos de uma Escola ──────────────────────────────────
+function HistoricoEscola({ escola, onEditar }: { escola: Escola; onEditar: (escola: Escola, mes: number, ano: number) => void }) {
+  const [periodos, setPeriodos] = useState<EduPeriodoLancado[]>([])
+  const [loading, setLoading] = useState(false)
+  const [aberto, setAberto] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<{ mes: number; ano: number } | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  async function carregar() {
+    setLoading(true)
+    try {
+      const lista = await getEduPeriodosLancados(escola.id)
+      setPeriodos(lista)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function toggleAberto() {
+    if (!aberto && periodos.length === 0) carregar()
+    setAberto((v) => !v)
+  }
+
+  async function handleDelete(mes: number, ano: number) {
+    setDeleting(true)
+    try {
+      await deleteEduLancamentoCompleto(escola.id, mes, ano)
+      setPeriodos((prev) => prev.filter((p) => !(p.mes === mes && p.ano === ano)))
+      setConfirmDelete(null)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div className="mt-3 border-t border-gray-100 pt-3">
+      <button
+        type="button"
+        onClick={toggleAberto}
+        className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-[#1066C6] transition-colors"
+      >
+        {aberto ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        {aberto ? 'Ocultar histórico' : 'Ver lançamentos anteriores'}
+      </button>
+
+      {aberto && (
+        <div className="mt-3">
+          {loading ? (
+            <div className="flex items-center gap-2 py-2">
+              <div className="animate-spin w-4 h-4 border-2 border-[#1066C6] border-t-transparent rounded-full" />
+              <span className="text-xs text-gray-400">Carregando...</span>
+            </div>
+          ) : periodos.length === 0 ? (
+            <p className="text-xs text-gray-400 py-2">Nenhum lançamento encontrado para esta escola.</p>
+          ) : (
+            <div className="space-y-2">
+              {periodos.map((p) => {
+                const isConfirming = confirmDelete?.mes === p.mes && confirmDelete?.ano === p.ano
+                return (
+                  <div
+                    key={`${p.ano}-${p.mes}`}
+                    className={[
+                      'rounded-xl border px-4 py-3 transition-colors',
+                      isConfirming ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-gray-50 hover:bg-gray-100',
+                    ].join(' ')}
+                  >
+                    {!isConfirming ? (
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-800">
+                              {MESES[p.mes - 1]}/{p.ano}
+                            </p>
+                            <div className="flex items-center gap-3 mt-0.5">
+                              <span className="text-xs text-gray-500">{p.totalFuncionarios} serv.</span>
+                              <span className="text-xs font-semibold text-[#1066C6]">{formatCurrency(p.totalCusto)}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onEditar(escola, p.mes, p.ano)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#1066C6] bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDelete({ mes: p.mes, ano: p.ano })}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Excluir
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 text-red-700">
+                          <AlertTriangle className="w-4 h-4 shrink-0" />
+                          <p className="text-sm font-medium">
+                            Excluir lançamento de <strong>{MESES[p.mes - 1]}/{p.ano}</strong>?
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDelete(null)}
+                            className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(p.mes, p.ano)}
+                            disabled={deleting}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                          >
+                            {deleting
+                              ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              : <Trash2 className="w-3.5 h-3.5" />}
+                            Confirmar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Página principal ─────────────────────────────────────────────────────────
 export function EduMunicipioDetalhe({ municipio, onBack, onLancar }: EduMunicipioDetalheProps) {
   const [escolas, setEscolas] = useState<Escola[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [mes, setMes] = useState(new Date().getMonth() + 1)
-  const [ano, setAno] = useState(new Date().getFullYear())
+
+  const [mes, setMes] = useState(String(new Date().getMonth() + 1))
+  const [ano, setAno] = useState(String(currentYear))
 
   // Form state
   const [formNome, setFormNome] = useState('')
   const [formEndereco, setFormEndereco] = useState('')
   const [formNivel, setFormNivel] = useState<NivelEnsino>('fundamental_ai')
   const [formZona, setFormZona] = useState<ZonaEscola>('urbana')
-  const [formAlunos, setFormAlunos] = useState(0)
-  const [formProfessores, setFormProfessores] = useState(0)
-  const [formFuncionarios, setFormFuncionarios] = useState(0)
+  const [formAlunos, setFormAlunos] = useState('')
+  const [formProfessores, setFormProfessores] = useState('')
+  const [formFuncionarios, setFormFuncionarios] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    loadEscolas()
-  }, [municipio.id])
+  // Excluir escola
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingEscola, setDeletingEscola] = useState(false)
+
+  useEffect(() => { loadEscolas() }, [municipio.id])
 
   async function loadEscolas() {
     setLoading(true)
     try {
       const data = await getEscolasByMunicipio(municipio.id)
       setEscolas(data)
-    } catch (err) {
-      console.error(err)
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleCreateEscola(e: React.FormEvent) {
-    e.preventDefault()
+  function handleCancelar() {
+    setShowForm(false)
+    setFormNome('')
+    setFormEndereco('')
+    setFormAlunos('')
+    setFormProfessores('')
+    setFormFuncionarios('')
+    setError('')
+  }
+
+  async function handleCreateEscola() {
+    if (!formNome.trim()) { setError('Informe o nome da escola.'); return }
+    if (!formEndereco.trim()) { setError('Informe o endereço.'); return }
+    setSaving(true)
+    setError('')
     try {
       await createEscola({
-        nome: formNome,
-        endereco: formEndereco,
+        nome: formNome.trim(),
+        endereco: formEndereco.trim(),
         nivel_ensino: formNivel,
         zona: formZona,
-        num_alunos: formAlunos,
-        num_professores: formProfessores,
-        num_funcionarios: formFuncionarios,
+        num_alunos: parseInt(formAlunos) || 0,
+        num_professores: parseInt(formProfessores) || 0,
+        num_funcionarios: parseInt(formFuncionarios) || 0,
         municipio_id: municipio.id,
       })
-      setShowForm(false)
-      setFormNome('')
-      setFormEndereco('')
-      setFormAlunos(0)
-      setFormProfessores(0)
-      setFormFuncionarios(0)
+      handleCancelar()
       loadEscolas()
-    } catch (err) {
-      console.error(err)
+    } catch {
+      setError('Erro ao salvar. Tente novamente.')
+    } finally {
+      setSaving(false)
     }
   }
 
   async function handleDeleteEscola(id: string) {
-    if (!confirm('Tem certeza que deseja excluir esta escola e todos os dados associados?')) return
+    setDeletingEscola(true)
     try {
       await deleteEscola(id)
-      loadEscolas()
-    } catch (err) {
-      console.error(err)
+      setEscolas((prev) => prev.filter((e) => e.id !== id))
+      setConfirmDeleteId(null)
+    } catch {
+      // silencia
+    } finally {
+      setDeletingEscola(false)
     }
   }
 
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-6">
+    <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          type="button"
-          onClick={onBack}
-          className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 text-gray-600" />
-        </button>
-        <div>
-          <h1 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-[#1066C6]" />
-            {municipio.nome}
-          </h1>
-          <p className="text-xs text-gray-400">{municipio.estado} • {municipio.habitantes?.toLocaleString('pt-BR')} habitantes</p>
-        </div>
-      </div>
-
-      {/* Ações */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
-          <School className="w-4 h-4 text-[#1066C6]" />
-          Escolas ({escolas.length})
-        </h2>
-        <button
-          type="button"
-          onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center gap-1.5 bg-[#1066C6] hover:bg-[#072F76] text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Nova Escola
-        </button>
-      </div>
-
-      {/* Formulário de nova escola */}
-      {showForm && (
-        <form onSubmit={handleCreateEscola} className="bg-white border border-gray-200 rounded-xl p-5 mb-6 shadow-sm">
-          <h3 className="text-sm font-bold text-gray-800 mb-4">Cadastrar Nova Escola</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Nome da Escola *</label>
-              <input
-                type="text"
-                required
-                value={formNome}
-                onChange={(e) => setFormNome(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#1066C6]/20 focus:border-[#1066C6] outline-none"
-                placeholder="E.M. Exemplo"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Endereço *</label>
-              <input
-                type="text"
-                required
-                value={formEndereco}
-                onChange={(e) => setFormEndereco(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#1066C6]/20 focus:border-[#1066C6] outline-none"
-                placeholder="Rua..."
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Nível de Ensino</label>
-              <select
-                value={formNivel}
-                onChange={(e) => setFormNivel(e.target.value as NivelEnsino)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#1066C6]/20 focus:border-[#1066C6] outline-none"
-              >
-                <option value="infantil">Educação Infantil</option>
-                <option value="fundamental_ai">Fundamental (Anos Iniciais)</option>
-                <option value="fundamental_af">Fundamental (Anos Finais)</option>
-                <option value="medio">Ensino Médio</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Zona</label>
-              <select
-                value={formZona}
-                onChange={(e) => setFormZona(e.target.value as ZonaEscola)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#1066C6]/20 focus:border-[#1066C6] outline-none"
-              >
-                <option value="urbana">Urbana</option>
-                <option value="rural">Rural</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Nº de Alunos</label>
-              <input
-                type="number"
-                min={0}
-                value={formAlunos}
-                onChange={(e) => setFormAlunos(Number(e.target.value))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#1066C6]/20 focus:border-[#1066C6] outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Nº de Professores</label>
-              <input
-                type="number"
-                min={0}
-                value={formProfessores}
-                onChange={(e) => setFormProfessores(Number(e.target.value))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#1066C6]/20 focus:border-[#1066C6] outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Nº de Funcionários</label>
-              <input
-                type="number"
-                min={0}
-                value={formFuncionarios}
-                onChange={(e) => setFormFuncionarios(Number(e.target.value))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#1066C6]/20 focus:border-[#1066C6] outline-none"
-              />
-            </div>
-          </div>
-          <div className="flex gap-3 mt-4">
-            <button
-              type="submit"
-              className="bg-[#1066C6] hover:bg-[#072F76] text-white text-xs font-semibold px-5 py-2 rounded-lg transition-colors"
-            >
-              Salvar
-            </button>
+      <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setShowForm(false)}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold px-5 py-2 rounded-lg transition-colors"
+              onClick={onBack}
+              className="p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
+              aria-label="Voltar"
             >
-              Cancelar
+              <ArrowLeft className="w-5 h-5" />
             </button>
-          </div>
-        </form>
-      )}
-
-      {/* Lista de escolas */}
-      {loading ? (
-        <div className="text-center py-12 text-gray-400">Carregando escolas...</div>
-      ) : escolas.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200">
-          <School className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-          <p className="text-sm">Nenhuma escola cadastrada</p>
-          <p className="text-xs text-gray-300 mt-1">Clique em "Nova Escola" para começar</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {escolas.map((escola) => (
-            <div
-              key={escola.id}
-              className="bg-white border border-gray-200 rounded-xl p-4 hover:border-[#1066C6]/30 transition-colors"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-lg bg-[#AECBE6]/30 flex items-center justify-center shrink-0">
-                    <GraduationCap className="w-5 h-5 text-[#1066C6]" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-900 truncate">{escola.nome}</p>
-                    <p className="text-xs text-gray-400">
-                      {NIVEL_LABELS[escola.nivel_ensino]} • {escola.zona === 'urbana' ? 'Urbana' : 'Rural'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 shrink-0">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-xs text-gray-500">
-                      <Users className="w-3 h-3 inline mr-1" />
-                      {escola.num_alunos} alunos • {escola.num_professores} prof.
-                    </p>
-                  </div>
-
-                  {/* Seletor de período + botão lançar */}
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={mes}
-                      onChange={(e) => setMes(Number(e.target.value))}
-                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-[#1066C6]/20 outline-none"
-                    >
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <option key={i + 1} value={i + 1}>
-                          {(i + 1).toString().padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={ano}
-                      onChange={(e) => setAno(Number(e.target.value))}
-                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-[#1066C6]/20 outline-none"
-                    >
-                      {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => onLancar(escola, mes, ano)}
-                      className="bg-[#1066C6] hover:bg-[#072F76] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      Lançar
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteEscola(escola.id)}
-                    className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors"
-                    title="Excluir escola"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                  </button>
-                </div>
+            <div className="flex-1">
+              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Município</p>
+              <h1 className="text-lg font-bold text-gray-900 leading-tight">{municipio.nome}</h1>
+            </div>
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-xs text-gray-400">{municipio.estado}</p>
+                <p className="text-sm font-bold text-gray-700">{municipio.habitantes.toLocaleString('pt-BR')} hab.</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1066C6] to-[#072F76] flex items-center justify-center">
+                <span className="text-xs font-bold text-white">{municipio.estado}</span>
               </div>
             </div>
-          ))}
+          </div>
         </div>
-      )}
+      </header>
+
+      <div className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 space-y-6">
+
+        {/* Seletor de período */}
+        <Card padding="sm">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 text-gray-600">
+              <div className="w-8 h-8 rounded-lg bg-[#1066C6]/10 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-[#1066C6]" />
+              </div>
+              <span className="text-sm font-semibold text-gray-700">Novo lançamento — período:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={mes} onChange={(e) => setMes(e.target.value)} options={MESES_OPTIONS} className="w-36" />
+              <Select value={ano} onChange={(e) => setAno(e.target.value)} options={ANOS_OPTIONS} className="w-24" />
+            </div>
+            <p className="text-xs text-gray-400 ml-auto hidden sm:block">Selecione o período antes de lançar dados</p>
+          </div>
+        </Card>
+
+        {/* Escolas */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Escolas Municipais</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {escolas.length} escola{escolas.length !== 1 ? 's' : ''} cadastrada{escolas.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+            {!showForm && (
+              <Button onClick={() => setShowForm(true)} type="button" variant="secondary">
+                <Plus className="w-4 h-4" />
+                Nova Escola
+              </Button>
+            )}
+          </div>
+
+          {/* Formulário nova escola */}
+          {showForm && (
+            <Card className="mb-4 border-[#1066C6]/20 bg-blue-50/30">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-[#1066C6] flex items-center justify-center">
+                    <Plus className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-800">Cadastrar Escola</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Input label="Nome da Escola" required value={formNome} onChange={(e) => setFormNome(e.target.value)} placeholder="E.M. Exemplo" />
+                  <Input label="Endereço" required value={formEndereco} onChange={(e) => setFormEndereco(e.target.value)} placeholder="Rua, número, bairro" />
+                  <Select
+                    label="Nível de Ensino"
+                    value={formNivel}
+                    onChange={(e) => setFormNivel(e.target.value as NivelEnsino)}
+                    options={[
+                      { value: 'infantil', label: 'Educação Infantil' },
+                      { value: 'fundamental_ai', label: 'Fund. Anos Iniciais' },
+                      { value: 'fundamental_af', label: 'Fund. Anos Finais' },
+                      { value: 'medio', label: 'Ensino Médio' },
+                    ]}
+                  />
+                  <Select
+                    label="Zona"
+                    value={formZona}
+                    onChange={(e) => setFormZona(e.target.value as ZonaEscola)}
+                    options={[
+                      { value: 'urbana', label: 'Urbana' },
+                      { value: 'rural', label: 'Rural' },
+                    ]}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Input label="Nº de Alunos" value={formAlunos} onChange={(e) => setFormAlunos(e.target.value.replace(/\D/g, ''))} placeholder="Ex: 420" inputMode="numeric" />
+                  <Input label="Nº de Professores" value={formProfessores} onChange={(e) => setFormProfessores(e.target.value.replace(/\D/g, ''))} placeholder="Ex: 22" inputMode="numeric" />
+                  <Input label="Nº de Funcionários" value={formFuncionarios} onChange={(e) => setFormFuncionarios(e.target.value.replace(/\D/g, ''))} placeholder="Ex: 12" inputMode="numeric" />
+                </div>
+                {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>}
+                <div className="flex gap-2 pt-1">
+                  <Button variant="ghost" onClick={handleCancelar} type="button">Cancelar</Button>
+                  <Button onClick={handleCreateEscola} loading={saving} type="button" className="bg-[#1066C6] hover:bg-[#072F76]">Salvar Escola</Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Lista de escolas */}
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin w-7 h-7 border-2 border-[#1066C6] border-t-transparent rounded-full" />
+                <p className="text-sm text-gray-400">Carregando escolas...</p>
+              </div>
+            </div>
+          ) : escolas.length === 0 ? (
+            <Card className="text-center py-14">
+              <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-gray-100">
+                <School className="w-7 h-7 text-gray-300" />
+              </div>
+              <p className="text-gray-600 font-semibold">Nenhuma escola cadastrada</p>
+              <p className="text-sm text-gray-400 mt-1">Clique em "Nova Escola" para adicionar</p>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {escolas.map((escola) => {
+                const isConfirmando = confirmDeleteId === escola.id
+
+                return (
+                  <div
+                    key={escola.id}
+                    className={[
+                      'bg-white border rounded-2xl shadow-sm transition-all duration-200',
+                      isConfirmando ? 'border-red-200' : 'border-gray-100 hover:shadow-md',
+                    ].join(' ')}
+                  >
+                    {/* Linha principal */}
+                    <div className="flex items-center justify-between gap-4 p-5">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-11 h-11 bg-gradient-to-br from-[#1066C6]/10 to-[#1066C6]/20 rounded-xl flex items-center justify-center shrink-0">
+                          <GraduationCap className="w-5 h-5 text-[#1066C6]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-gray-900 truncate">{escola.nome}</p>
+                          <p className="text-sm text-gray-500 truncate mt-0.5">{escola.endereco}</p>
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                            <p className="text-xs text-[#1066C6] font-medium">
+                              {NIVEL_LABELS[escola.nivel_ensino]}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              <Users className="w-3 h-3 inline mr-0.5" />
+                              {escola.num_alunos} alunos • {escola.num_professores} prof.
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {escola.zona === 'urbana' ? 'Urbana' : 'Rural'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {!isConfirmando && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => { setConfirmDeleteId(escola.id) }}
+                            title="Excluir escola"
+                            className="p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onLancar(escola, parseInt(mes), parseInt(ano))}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#1066C6] text-white text-sm font-semibold rounded-xl hover:bg-[#072F76] transition-colors shadow-sm"
+                          >
+                            Lançar dados
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Confirmar exclusão */}
+                    {isConfirmando && (
+                      <div className="px-5 pb-4 pt-3 border-t border-red-100 bg-red-50 rounded-b-2xl">
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <div className="flex items-center gap-2 text-red-700">
+                            <AlertTriangle className="w-4 h-4 shrink-0" />
+                            <p className="text-sm font-medium">
+                              Excluir <strong>{escola.nome}</strong> e todos os dados?
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteEscola(escola.id)}
+                              disabled={deletingEscola}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                            >
+                              {deletingEscola
+                                ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                : <Trash2 className="w-3.5 h-3.5" />}
+                              Confirmar exclusão
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Histórico de lançamentos */}
+                    {!isConfirmando && (
+                      <div className="px-5 pb-4">
+                        <HistoricoEscola escola={escola} onEditar={onLancar} />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-100 bg-white py-4 mt-auto">
+        <p className="text-center text-xs text-gray-400">
+          SICM-Educação ·{' '}
+          <a href="https://www.uel.br/projetos/nigep/" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 hover:underline underline-offset-2 transition-colors">
+            Desenvolvido por NIGEP
+          </a>
+        </p>
+      </footer>
     </div>
   )
 }
