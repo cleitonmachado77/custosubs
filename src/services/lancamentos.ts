@@ -31,6 +31,7 @@ export async function upsertFuncionarios(
     cargo: f.cargo,
     vinculo: f.vinculo,
     salario: f.salario,
+    equipe: f.equipe && f.equipe > 0 ? f.equipe : null,
     ubs_id: ubsId,
     mes,
     ano,
@@ -162,7 +163,7 @@ export async function getLancamentoCompleto(
     ])
 
   return {
-    funcionarios: funcionarios.map(({ nome, cargo, vinculo, salario }) => ({ nome, cargo, vinculo, salario })),
+    funcionarios: funcionarios.map(({ nome, cargo, vinculo, salario, equipe }) => ({ nome, cargo, vinculo, salario, equipe: equipe ?? 0 })),
     producao: producao.map(({ evento, quantidade_atendimentos, responsaveis }) => ({
       evento,
       quantidade_atendimentos,

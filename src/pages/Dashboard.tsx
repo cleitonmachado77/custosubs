@@ -18,6 +18,7 @@ import { formatCurrency } from '@/lib/utils'
 import type { Municipio } from '@/types'
 
 const MESES = [
+  { value: '0', label: '📅 Ano inteiro' },
   { value: '1', label: 'Janeiro' }, { value: '2', label: 'Fevereiro' },
   { value: '3', label: 'Março' },   { value: '4', label: 'Abril' },
   { value: '5', label: 'Maio' },    { value: '6', label: 'Junho' },
@@ -25,7 +26,7 @@ const MESES = [
   { value: '9', label: 'Setembro' },{ value: '10', label: 'Outubro' },
   { value: '11', label: 'Novembro' },{ value: '12', label: 'Dezembro' },
 ]
-const MESES_LABEL = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const MESES_LABEL = ['Ano inteiro','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 const currentYear = new Date().getFullYear()
 const ANOS = Array.from({ length: 6 }, (_, i) => ({ value: String(currentYear - i), label: String(currentYear - i) }))
 
@@ -441,7 +442,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 value={mes}
                 onChange={(e) => setMes(e.target.value)}
                 options={MESES}
-                className="w-36"
+                className="w-44"
               />
               <Select
                 value={ano}
@@ -587,7 +588,83 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
               />
             </div>
 
-            {/* ── KPIs Linha 2 — Custos ────────────────────────────── */}
+            {/* ── KPIs Linha 2 — Cobertura ESF ─────────────────────── */}
+            {data.totalEquipesEsf > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <KpiCard
+                  title="Equipes ESF"
+                  value={String(data.totalEquipesEsf)}
+                  subtitle="equipes da saúde da família"
+                  icon={<Users className="w-5 h-5" />}
+                  color="green"
+                  onClick={() => setExplain({
+                    title: 'Equipes ESF',
+                    value: String(data.totalEquipesEsf),
+                    formula: 'Σ equipes ESF de todas as UBS',
+                    steps: data.ubsLista.filter((u) => (u.num_equipes_esf ?? 0) > 0).map((u) => ({
+                      label: u.nome,
+                      value: `${u.num_equipes_esf} equipe(s)`,
+                    })).concat([{ label: 'Total', value: String(data.totalEquipesEsf), highlight: true } as { label: string; value: string; highlight?: boolean }]),
+                    note: 'Soma das equipes de Saúde da Família cadastradas em cada UBS do município.',
+                  })}
+                />
+                <KpiCard
+                  title="Pop. de Referência"
+                  value={data.totalPopReferencia.toLocaleString('pt-BR')}
+                  subtitle="população coberta"
+                  icon={<Users className="w-5 h-5" />}
+                  color="blue"
+                  onClick={() => setExplain({
+                    title: 'População de Referência',
+                    value: data.totalPopReferencia.toLocaleString('pt-BR'),
+                    formula: 'Σ população de referência de todas as UBS',
+                    steps: data.ubsLista.filter((u) => (u.populacao_referencia ?? 0) > 0).map((u) => ({
+                      label: u.nome,
+                      value: (u.populacao_referencia ?? 0).toLocaleString('pt-BR'),
+                    })).concat([{ label: 'Total', value: data.totalPopReferencia.toLocaleString('pt-BR'), highlight: true } as { label: string; value: string; highlight?: boolean }]),
+                    note: 'Soma da população de referência atribuída a cada UBS.',
+                  })}
+                />
+                <KpiCard
+                  title="Pop. por Equipe"
+                  value={fmtNum(data.popPorEquipeEsf, 0)}
+                  subtitle="habitantes por equipe ESF"
+                  icon={<Activity className="w-5 h-5" />}
+                  color="orange"
+                  onClick={() => setExplain({
+                    title: 'População por Equipe ESF',
+                    value: fmtNum(data.popPorEquipeEsf, 0),
+                    formula: 'Pop. de Referência Total ÷ Total de Equipes ESF',
+                    steps: [
+                      { label: 'Pop. de referência', value: data.totalPopReferencia.toLocaleString('pt-BR') },
+                      { label: 'Equipes ESF', value: String(data.totalEquipesEsf) },
+                      { label: 'Resultado', value: fmtNum(data.popPorEquipeEsf, 0), highlight: true },
+                    ],
+                    note: 'O Ministério da Saúde recomenda entre 2.000 e 3.500 pessoas por equipe ESF.',
+                  })}
+                />
+                <KpiCard
+                  title="Cobertura ESF"
+                  value={`${fmtNum(data.coberturaEsf, 1)}%`}
+                  subtitle="da população municipal"
+                  icon={<Stethoscope className="w-5 h-5" />}
+                  color="teal"
+                  onClick={() => setExplain({
+                    title: 'Cobertura ESF',
+                    value: `${fmtNum(data.coberturaEsf, 1)}%`,
+                    formula: '(Pop. de Referência ÷ Habitantes do Município) × 100',
+                    steps: [
+                      { label: 'Pop. de referência', value: data.totalPopReferencia.toLocaleString('pt-BR') },
+                      { label: 'Habitantes do município', value: data.municipioHabitantes.toLocaleString('pt-BR') },
+                      { label: 'Cobertura', value: `${fmtNum(data.coberturaEsf, 1)}%`, highlight: true },
+                    ],
+                    note: 'Percentual da população do município coberta pelas equipes de Saúde da Família.',
+                  })}
+                />
+              </div>
+            )}
+
+            {/* ── KPIs Linha 3 — Custos ────────────────────────────── */}
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
               <KpiCard
                 title="Custo Total"
@@ -861,6 +938,98 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                           position="right"
                           formatter={(v: unknown) => `${v} serv.`}
                           style={{ fontSize: 11, fill: '#6b7280' }}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+              </div>
+            )}
+
+            {/* ── Gráfico — Serviços Disponíveis por UBS ──────────── */}
+            {data.servicosDisponiveis.length > 0 && (
+              <ChartCard
+                title="Serviços Disponíveis"
+                subtitle="quantidade de UBS que oferecem cada serviço"
+                minHeight="min-h-64"
+              >
+                <ResponsiveContainer width="100%" height={Math.max(200, data.servicosDisponiveis.length * 40)}>
+                  <BarChart
+                    data={data.servicosDisponiveis}
+                    layout="vertical"
+                    margin={{ top: 5, right: 60, left: 10, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="servico" tick={{ fontSize: 11 }} width={120} />
+                    <Tooltip
+                      formatter={(v) => [`${v} UBS`, 'Oferecem']}
+                      contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
+                    />
+                    <Bar dataKey="quantidade" name="UBS" fill="#8b5cf6" radius={[0, 4, 4, 0]}>
+                      <LabelList
+                        dataKey="quantidade"
+                        position="right"
+                        formatter={(v: unknown) => `${v} UBS`}
+                        style={{ fontSize: 11, fill: '#6b7280' }}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            )}
+
+            {/* ── Gráfico — Funcionários por Equipe ESF ────────────── */}
+            {data.funcionariosPorEquipe.length > 1 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ChartCard
+                  title="Servidores por Equipe ESF"
+                  subtitle="distribuição de funcionários entre as equipes"
+                  minHeight="min-h-64"
+                >
+                  <ResponsiveContainer width="100%" height={Math.max(200, data.funcionariosPorEquipe.length * 44)}>
+                    <BarChart
+                      data={data.funcionariosPorEquipe}
+                      layout="vertical"
+                      margin={{ top: 5, right: 60, left: 10, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="equipe" tick={{ fontSize: 12 }} width={90} />
+                      <Tooltip content={<TooltipNumero />} />
+                      <Bar dataKey="quantidade" name="Servidores" fill="#01884d" radius={[0, 4, 4, 0]}>
+                        <LabelList
+                          dataKey="quantidade"
+                          position="right"
+                          formatter={(v: unknown) => `${v} serv.`}
+                          style={{ fontSize: 11, fill: '#6b7280' }}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+
+                <ChartCard
+                  title="Custo de Pessoal por Equipe ESF"
+                  subtitle="total de salários por equipe"
+                  minHeight="min-h-64"
+                >
+                  <ResponsiveContainer width="100%" height={Math.max(200, data.funcionariosPorEquipe.length * 44)}>
+                    <BarChart
+                      data={data.funcionariosPorEquipe}
+                      layout="vertical"
+                      margin={{ top: 5, right: 80, left: 10, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                      <XAxis type="number" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="equipe" tick={{ fontSize: 12 }} width={90} />
+                      <Tooltip content={<TooltipMoeda />} />
+                      <Bar dataKey="totalSalarios" name="Total Salários" fill="#004aad" radius={[0, 4, 4, 0]}>
+                        <LabelList
+                          dataKey="totalSalarios"
+                          position="right"
+                          formatter={(v: unknown) => fmtCur(Number(v))}
+                          style={{ fontSize: 10, fill: '#6b7280' }}
                         />
                       </Bar>
                     </BarChart>

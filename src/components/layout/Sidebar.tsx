@@ -1,11 +1,11 @@
-import { Activity, Building2, ChevronLeft, LayoutDashboard, MapPin } from 'lucide-react'
+import { Activity, Building2, ChevronLeft, FileSpreadsheet, LayoutDashboard, MapPin } from 'lucide-react'
 import logo1 from '/SICM1.png'
 
-type Screen = 'home' | 'municipio' | 'lancamento' | 'dashboard'
+type Screen = 'home' | 'municipio' | 'lancamento' | 'dashboard' | 'importar'
 
 interface SidebarProps {
   activeScreen: Screen
-  onNavigate: (screen: 'home' | 'dashboard') => void
+  onNavigate: (screen: 'home' | 'dashboard' | 'importar') => void
   onBackToLanding?: () => void
 }
 
@@ -21,6 +21,12 @@ const navItems = [
     label: 'Municípios',
     icon: MapPin,
     description: 'Gerenciar municípios e UBS',
+  },
+  {
+    id: 'importar' as const,
+    label: 'Importar Excel',
+    icon: FileSpreadsheet,
+    description: 'Lançar dados via planilha',
   },
 ]
 

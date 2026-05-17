@@ -196,6 +196,10 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
   const [nome, setNome] = useState('')
   const [endereco, setEndereco] = useState('')
   const [cnes, setCnes] = useState('')
+  const [popReferencia, setPopReferencia] = useState('')
+  const [numEquipesEsf, setNumEquipesEsf] = useState('')
+  const [servicos, setServicos] = useState<string[]>([])
+  const [novoServico, setNovoServico] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -204,6 +208,10 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
   const [editNome, setEditNome] = useState('')
   const [editEndereco, setEditEndereco] = useState('')
   const [editCnes, setEditCnes] = useState('')
+  const [editPopReferencia, setEditPopReferencia] = useState('')
+  const [editNumEquipesEsf, setEditNumEquipesEsf] = useState('')
+  const [editServicos, setEditServicos] = useState<string[]>([])
+  const [editNovoServico, setEditNovoServico] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
   const [editError, setEditError] = useState('')
 
@@ -230,16 +238,25 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
     setSaving(true)
     setError('')
     try {
+      const pop = popReferencia ? parseInt(popReferencia, 10) : null
+      const equipes = numEquipesEsf ? parseInt(numEquipesEsf, 10) : null
       const nova = await createUBS({
         nome: nome.trim(),
         endereco: endereco.trim(),
         cnes: cnes.trim() || null,
+        populacao_referencia: pop && pop > 0 ? pop : null,
+        num_equipes_esf: equipes && equipes > 0 ? equipes : null,
+        servicos: servicos.length > 0 ? servicos : null,
         municipio_id: municipio.id,
       })
       setShowForm(false)
       setNome('')
       setEndereco('')
       setCnes('')
+      setPopReferencia('')
+      setNumEquipesEsf('')
+      setServicos([])
+      setNovoServico('')
       setUbsList((prev) => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)))
     } catch {
       setError('Erro ao salvar. Tente novamente.')
@@ -253,6 +270,10 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
     setEditNome(ubs.nome)
     setEditEndereco(ubs.endereco)
     setEditCnes(ubs.cnes ?? '')
+    setEditPopReferencia(ubs.populacao_referencia ? String(ubs.populacao_referencia) : '')
+    setEditNumEquipesEsf(ubs.num_equipes_esf ? String(ubs.num_equipes_esf) : '')
+    setEditServicos(ubs.servicos ?? [])
+    setEditNovoServico('')
     setEditError('')
     setConfirmDeleteUbsId(null)
   }
@@ -262,6 +283,10 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
     setEditNome('')
     setEditEndereco('')
     setEditCnes('')
+    setEditPopReferencia('')
+    setEditNumEquipesEsf('')
+    setEditServicos([])
+    setEditNovoServico('')
     setEditError('')
   }
 
@@ -272,10 +297,15 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
     setSavingEdit(true)
     setEditError('')
     try {
+      const pop = editPopReferencia ? parseInt(editPopReferencia, 10) : null
+      const equipes = editNumEquipesEsf ? parseInt(editNumEquipesEsf, 10) : null
       const atualizada = await updateUBS(ubs.id, {
         nome: editNome.trim(),
         endereco: editEndereco.trim(),
         cnes: editCnes.trim() || null,
+        populacao_referencia: pop && pop > 0 ? pop : null,
+        num_equipes_esf: equipes && equipes > 0 ? equipes : null,
+        servicos: editServicos.length > 0 ? editServicos : null,
       })
       setUbsList((prev) => prev.map((u) => u.id === ubs.id ? atualizada : u))
       cancelarEdicaoUbs()
@@ -376,7 +406,7 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
                   </div>
                   <h3 className="font-bold text-gray-800">Cadastrar UBS</h3>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                   <Input label="Nome da UBS" required value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: UBS Centro, UBS Vila Nova..." />
                   <Input label="Endereço" required value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Rua, número, bairro..." />
                   <Input
@@ -387,10 +417,71 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
                     inputMode="numeric"
                     maxLength={7}
                   />
+                  <Input
+                    label="Pop. de Referência"
+                    value={popReferencia}
+                    onChange={(e) => setPopReferencia(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Ex: 3500"
+                    inputMode="numeric"
+                  />
+                  <Input
+                    label="Equipes ESF"
+                    value={numEquipesEsf}
+                    onChange={(e) => setNumEquipesEsf(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                    placeholder="Ex: 3"
+                    inputMode="numeric"
+                    maxLength={2}
+                  />
                 </div>
+
+                {/* Serviços */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Serviços disponíveis</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={novoServico}
+                      onChange={(e) => setNovoServico(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && novoServico.trim()) {
+                          e.preventDefault()
+                          if (!servicos.includes(novoServico.trim())) {
+                            setServicos([...servicos, novoServico.trim()])
+                          }
+                          setNovoServico('')
+                        }
+                      }}
+                      placeholder="Ex: Odontológico, Psicólogo..."
+                      className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#01884d]/40 focus:border-[#01884d] transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (novoServico.trim() && !servicos.includes(novoServico.trim())) {
+                          setServicos([...servicos, novoServico.trim()])
+                          setNovoServico('')
+                        }
+                      }}
+                      className="px-3 py-2 text-sm font-medium text-[#01884d] bg-[#01884d]/10 rounded-xl hover:bg-[#01884d]/20 transition-colors"
+                    >
+                      Adicionar
+                    </button>
+                  </div>
+                  {servicos.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {servicos.map((s) => (
+                        <span key={s} className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full border border-purple-200">
+                          {s}
+                          <button type="button" onClick={() => setServicos(servicos.filter((x) => x !== s))} className="hover:text-purple-900" aria-label={`Remover ${s}`}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>}
                 <div className="flex gap-2 pt-1">
-                  <Button variant="ghost" onClick={() => { setShowForm(false); setNome(''); setEndereco(''); setCnes(''); setError('') }} type="button">Cancelar</Button>
+                  <Button variant="ghost" onClick={() => { setShowForm(false); setNome(''); setEndereco(''); setCnes(''); setPopReferencia(''); setNumEquipesEsf(''); setServicos([]); setNovoServico(''); setError('') }} type="button">Cancelar</Button>
                   <Button onClick={handleCreate} loading={saving} type="button">Salvar UBS</Button>
                 </div>
               </div>
@@ -436,10 +527,31 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
                         <div className="min-w-0">
                           <p className="font-bold text-gray-900 truncate">{ubs.nome}</p>
                           <p className="text-sm text-gray-500 truncate mt-0.5">{ubs.endereco}</p>
-                          {ubs.cnes && (
-                            <p className="text-xs text-[#004aad] font-medium mt-0.5">
-                              CNES: {ubs.cnes}
-                            </p>
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                            {ubs.cnes && (
+                              <p className="text-xs text-[#004aad] font-medium">
+                                CNES: {ubs.cnes}
+                              </p>
+                            )}
+                            {ubs.populacao_referencia && (
+                              <p className="text-xs text-[#01884d] font-medium">
+                                Pop. ref.: {ubs.populacao_referencia.toLocaleString('pt-BR')}
+                              </p>
+                            )}
+                            {ubs.num_equipes_esf && (
+                              <p className="text-xs text-purple-600 font-medium">
+                                {ubs.num_equipes_esf} equipe{ubs.num_equipes_esf > 1 ? 's' : ''} ESF
+                              </p>
+                            )}
+                          </div>
+                          {ubs.servicos && ubs.servicos.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {ubs.servicos.map((s) => (
+                                <span key={s} className="text-[10px] font-medium px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded border border-purple-100">
+                                  {s}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -478,7 +590,7 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
                     {isEditando && (
                       <div className="px-5 pb-4 border-t border-gray-100 pt-3">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Editar dados da UBS</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
                           <Input
                             label="Nome da UBS"
                             value={editNome}
@@ -498,7 +610,68 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
                             inputMode="numeric"
                             maxLength={7}
                           />
+                          <Input
+                            label="Pop. de Referência"
+                            value={editPopReferencia}
+                            onChange={(e) => setEditPopReferencia(e.target.value.replace(/\D/g, ''))}
+                            placeholder="Ex: 3500"
+                            inputMode="numeric"
+                          />
+                          <Input
+                            label="Equipes ESF"
+                            value={editNumEquipesEsf}
+                            onChange={(e) => setEditNumEquipesEsf(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                            placeholder="Ex: 3"
+                            inputMode="numeric"
+                            maxLength={2}
+                          />
                         </div>
+
+                        {/* Serviços (edição) */}
+                        <div className="mb-3">
+                          <label className="text-sm font-medium text-gray-700 mb-1 block">Serviços disponíveis</label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={editNovoServico}
+                              onChange={(e) => setEditNovoServico(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && editNovoServico.trim()) {
+                                  e.preventDefault()
+                                  if (!editServicos.includes(editNovoServico.trim())) {
+                                    setEditServicos([...editServicos, editNovoServico.trim()])
+                                  }
+                                  setEditNovoServico('')
+                                }
+                              }}
+                              placeholder="Ex: Odontológico, Psicólogo..."
+                              className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#01884d]/40 focus:border-[#01884d] transition-colors"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (editNovoServico.trim() && !editServicos.includes(editNovoServico.trim())) {
+                                  setEditServicos([...editServicos, editNovoServico.trim()])
+                                  setEditNovoServico('')
+                                }
+                              }}
+                              className="px-3 py-2 text-sm font-medium text-[#01884d] bg-[#01884d]/10 rounded-xl hover:bg-[#01884d]/20 transition-colors"
+                            >
+                              Adicionar
+                            </button>
+                          </div>
+                          {editServicos.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {editServicos.map((s) => (
+                                <span key={s} className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full border border-purple-200">
+                                  {s}
+                                  <button type="button" onClick={() => setEditServicos(editServicos.filter((x) => x !== s))} className="hover:text-purple-900" aria-label={`Remover ${s}`}>×</button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
                         {editError && <p className="text-xs text-red-600 mb-2">{editError}</p>}
                         <div className="flex gap-2">
                           <button

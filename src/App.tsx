@@ -6,6 +6,7 @@ import { HomeMunicipios } from '@/pages/HomeMunicipios'
 import { MunicipioDetalhe } from '@/pages/MunicipioDetalhe'
 import { PainelLancamento } from '@/pages/PainelLancamento'
 import { Dashboard } from '@/pages/Dashboard'
+import { ImportarExcel } from '@/pages/ImportarExcel'
 import type { Municipio, UBS } from '@/types'
 
 type View =
@@ -14,11 +15,12 @@ type View =
   | { screen: 'municipio'; municipio: Municipio }
   | { screen: 'lancamento'; municipio: Municipio; ubs: UBS; mes: number; ano: number }
   | { screen: 'dashboard' }
+  | { screen: 'importar' }
 
 export default function App() {
   const [view, setView] = useState<View>({ screen: 'landing' })
 
-  function handleNavigate(screen: 'home' | 'dashboard') {
+  function handleNavigate(screen: 'home' | 'dashboard' | 'importar') {
     setView({ screen })
   }
 
@@ -69,6 +71,10 @@ export default function App() {
 
         {view.screen === 'dashboard' && (
           <Dashboard onBack={() => setView({ screen: 'home' })} />
+        )}
+
+        {view.screen === 'importar' && (
+          <ImportarExcel onBack={() => setView({ screen: 'home' })} />
         )}
       </main>
     </div>

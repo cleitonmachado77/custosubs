@@ -16,13 +16,16 @@ create table if not exists municipios (
 
 -- ─── UBS ─────────────────────────────────────────────────────
 create table if not exists ubs (
-  id           uuid primary key default gen_random_uuid(),
-  nome         text not null,
-  endereco     text not null,
-  cnes         varchar(7) check (cnes ~ '^\d{7}$'),
-  municipio_id uuid not null references municipios(id) on delete cascade,
-  created_at   timestamptz default now(),
-  updated_at   timestamptz default now()
+  id                    uuid primary key default gen_random_uuid(),
+  nome                  text not null,
+  endereco              text not null,
+  cnes                  varchar(7) check (cnes ~ '^\d{7}$'),
+  populacao_referencia  integer check (populacao_referencia > 0),
+  num_equipes_esf       integer check (num_equipes_esf > 0),
+  servicos              text[],
+  municipio_id          uuid not null references municipios(id) on delete cascade,
+  created_at            timestamptz default now(),
+  updated_at            timestamptz default now()
 );
 
 -- ─── Funcionários ────────────────────────────────────────────
@@ -33,6 +36,7 @@ create table if not exists funcionarios (
   cargo      text not null,
   vinculo    text not null default 'concursado' check (vinculo in ('concursado','clt','terceirizado')),
   salario    numeric(12,2) not null check (salario >= 0),
+  equipe     integer check (equipe > 0),
   mes        integer not null check (mes between 1 and 12),
   ano        integer not null check (ano >= 2000),
   created_at timestamptz default now()
@@ -67,6 +71,18 @@ create table if not exists itens_custo (
 
 -- ─── Migração: adicionar coluna cnes (execute se a tabela já existir) ────────
 -- alter table ubs add column if not exists cnes varchar(7) check (cnes ~ '^\d{7}$');
+
+-- ─── Migração: adicionar coluna populacao_referencia ──────────────────────────
+-- alter table ubs add column if not exists populacao_referencia integer check (populacao_referencia > 0);
+
+-- ─── Migração: adicionar coluna num_equipes_esf ───────────────────────────────
+-- alter table ubs add column if not exists num_equipes_esf integer check (num_equipes_esf > 0);
+
+-- ─── Migração: adicionar coluna servicos ──────────────────────────────────────
+-- alter table ubs add column if not exists servicos text[];
+
+-- ─── Migração: adicionar coluna equipe em funcionarios ────────────────────────
+-- alter table funcionarios add column if not exists equipe integer check (equipe > 0);
 
 -- ─── Migração: adicionar coluna vinculo em funcionarios ───────────────────────
 -- alter table funcionarios add column if not exists vinculo text not null default 'concursado' check (vinculo in ('concursado','clt','terceirizado'));

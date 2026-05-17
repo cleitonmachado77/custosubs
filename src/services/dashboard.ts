@@ -11,7 +11,19 @@ export interface DashboardData {
 
   // UBS
   totalUbs: number
-  ubsLista: { id: string; nome: string; cnes?: string | null }[]
+  ubsLista: { id: string; nome: string; cnes?: string | null; populacao_referencia?: number | null; num_equipes_esf?: number | null; servicos?: string[] | null }[]
+
+  // Equipes ESF e cobertura
+  totalEquipesEsf: number
+  totalPopReferencia: number
+  popPorEquipeEsf: number
+  coberturaEsf: number  // % da pop. do município coberta pelas equipes
+
+  // Serviços disponíveis (quantas UBS oferecem cada serviço)
+  servicosDisponiveis: { servico: string; quantidade: number }[]
+
+  // Funcionários por equipe ESF
+  funcionariosPorEquipe: { equipe: string; quantidade: number; totalSalarios: number }[]
 
   // Atendimentos
   totalAtendimentos: number
@@ -81,7 +93,7 @@ export async function getDashboardData(
   // Busca todas as UBS do município
   const { data: ubsLista, error: errUbs } = await supabase
     .from('ubs')
-    .select('id, nome, cnes')
+    .select('id, nome, cnes, populacao_referencia, num_equipes_esf, servicos')
     .eq('municipio_id', municipioId)
     .order('nome')
   if (errUbs) throw errUbs
@@ -93,25 +105,17 @@ export async function getDashboardData(
   }
 
   // Busca todos os dados do período em paralelo
+  // Se mes === 0, busca o ano inteiro (sem filtro de mês)
+  const buildQuery = (table: string) => {
+    let q = supabase.from(table).select('*').in('ubs_id', ubsIds).eq('ano', ano)
+    if (mes > 0) q = q.eq('mes', mes)
+    return q
+  }
+
   const [funcionarios, producao, itensCusto] = await Promise.all([
-    supabase
-      .from('funcionarios')
-      .select('*')
-      .in('ubs_id', ubsIds)
-      .eq('mes', mes)
-      .eq('ano', ano),
-    supabase
-      .from('producao_eventos')
-      .select('*')
-      .in('ubs_id', ubsIds)
-      .eq('mes', mes)
-      .eq('ano', ano),
-    supabase
-      .from('itens_custo')
-      .select('*')
-      .in('ubs_id', ubsIds)
-      .eq('mes', mes)
-      .eq('ano', ano),
+    buildQuery('funcionarios'),
+    buildQuery('producao_eventos'),
+    buildQuery('itens_custo'),
   ])
 
   if (funcionarios.error) throw funcionarios.error
@@ -213,6 +217,39 @@ export async function getDashboardData(
 
   // ── Indicadores ───────────────────────────────────────────────
   const hab = municipio.habitantes
+
+  // ── Equipes ESF e cobertura ───────────────────────────────────
+  const totalEquipesEsf = (ubsLista ?? []).reduce((s, u) => s + (u.num_equipes_esf ?? 0), 0)
+  const totalPopReferencia = (ubsLista ?? []).reduce((s, u) => s + (u.populacao_referencia ?? 0), 0)
+  const popPorEquipeEsf = totalEquipesEsf > 0 ? totalPopReferencia / totalEquipesEsf : 0
+  const coberturaEsf = hab > 0 ? Math.min((totalPopReferencia / hab) * 100, 100) : 0
+
+  // ── Serviços disponíveis ──────────────────────────────────────
+  const servicoCount: Record<string, number> = {}
+  ;(ubsLista ?? []).forEach((u) => {
+    (u.servicos ?? []).forEach((s) => {
+      servicoCount[s] = (servicoCount[s] || 0) + 1
+    })
+  })
+  const servicosDisponiveis = Object.entries(servicoCount)
+    .map(([servico, quantidade]) => ({ servico, quantidade }))
+    .sort((a, b) => b.quantidade - a.quantidade)
+
+  // ── Funcionários por equipe ESF ───────────────────────────────
+  const equipeMap: Record<string, { quantidade: number; totalSalarios: number }> = {}
+  funcs.forEach((f) => {
+    const eq = f.equipe && f.equipe > 0 ? `Equipe ${f.equipe}` : 'Sem equipe'
+    if (!equipeMap[eq]) equipeMap[eq] = { quantidade: 0, totalSalarios: 0 }
+    equipeMap[eq].quantidade += 1
+    equipeMap[eq].totalSalarios += Number(f.salario)
+  })
+  const funcionariosPorEquipe = Object.entries(equipeMap)
+    .map(([equipe, v]) => ({ equipe, ...v }))
+    .sort((a, b) => {
+      if (a.equipe === 'Sem equipe') return 1
+      if (b.equipe === 'Sem equipe') return -1
+      return a.equipe.localeCompare(b.equipe)
+    })
   const custoMedioPorServidor = totalFuncionarios > 0 ? totalSalarios / totalFuncionarios : 0
   const custoPorAtendimento = totalAtendimentos > 0 ? custoTotal / totalAtendimentos : 0
   const custoPerCapita = hab > 0 ? custoTotal / hab : 0
@@ -231,6 +268,12 @@ export async function getDashboardData(
     ano,
     totalUbs: (ubsLista ?? []).length,
     ubsLista: ubsLista ?? [],
+    totalEquipesEsf,
+    totalPopReferencia,
+    popPorEquipeEsf,
+    coberturaEsf,
+    servicosDisponiveis,
+    funcionariosPorEquipe,
     totalAtendimentos,
     atendimentosPorUbs,
     custosPessoal,
@@ -266,6 +309,8 @@ function emptyDashboard(municipio: { id: string; nome: string; estado: string; h
     municipioHabitantes: municipio.habitantes,
     mes, ano,
     totalUbs: 0, ubsLista: [],
+    totalEquipesEsf: 0, totalPopReferencia: 0, popPorEquipeEsf: 0, coberturaEsf: 0,
+    servicosDisponiveis: [], funcionariosPorEquipe: [],
     totalAtendimentos: 0, atendimentosPorUbs: [],
     custosPessoal: 0, custosMateriaisConsumo: 0, custosInsumos: 0,
     custosAdministrativos: 0, custosTerceirizados: 0, custoTotal: 0,

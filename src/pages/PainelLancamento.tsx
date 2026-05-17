@@ -281,6 +281,7 @@ export function PainelLancamento({ municipio, ubs, mes, ano, onBack }: PainelLan
                 <Step3Funcionarios
                   funcionarios={data.funcionarios}
                   onChange={(items) => setData((d) => ({ ...d, funcionarios: items }))}
+                  numEquipes={ubs.num_equipes_esf ?? 0}
                 />
               )}
               {currentStep === 2 && (

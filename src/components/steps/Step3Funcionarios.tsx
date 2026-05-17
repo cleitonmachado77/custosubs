@@ -4,9 +4,10 @@ import { FuncionariosList, type FuncionarioItem } from '@/components/form/Funcio
 interface Step3Props {
   funcionarios: FuncionarioItem[]
   onChange: (items: FuncionarioItem[]) => void
+  numEquipes?: number
 }
 
-export function Step3Funcionarios({ funcionarios, onChange }: Step3Props) {
+export function Step3Funcionarios({ funcionarios, onChange, numEquipes = 0 }: Step3Props) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
@@ -15,11 +16,14 @@ export function Step3Funcionarios({ funcionarios, onChange }: Step3Props) {
         </div>
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Funcionários</h2>
-          <p className="text-sm text-gray-500">Informe os funcionários e seus salários no período</p>
+          <p className="text-sm text-gray-500">
+            Informe os funcionários e seus salários no período
+            {numEquipes > 0 && ` — atribua cada um a uma das ${numEquipes} equipe(s) ESF`}
+          </p>
         </div>
       </div>
 
-      <FuncionariosList items={funcionarios} onChange={onChange} />
+      <FuncionariosList items={funcionarios} onChange={onChange} numEquipes={numEquipes} />
     </div>
   )
 }

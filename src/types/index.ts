@@ -14,6 +14,9 @@ export interface UBS {
   nome: string
   endereco: string
   cnes?: string | null
+  populacao_referencia?: number | null
+  num_equipes_esf?: number | null
+  servicos?: string[] | null
   municipio_id: string
   created_at?: string
   updated_at?: string
@@ -29,6 +32,7 @@ export interface Funcionario {
   cargo: string
   vinculo: VinculoFuncionario
   salario: number
+  equipe?: number | null
   created_at?: string
 }
 
