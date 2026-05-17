@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { getEduDashboardData, type EduDashboardData } from '@/services/educacao-dashboard'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList, LineChart, Line, ScatterChart, Scatter, ZAxis } from 'recharts'
 import { GraduationCap, Users, DollarSign, School, BookOpen, TrendingUp, UserCheck, Building2, Download, Target, Activity } from 'lucide-react'
-import { KpiExplainModal, type KpiExplain } from '@/components/dashboard/KpiExplainModal'
+import { EduKpiExplainModal, type KpiExplain } from '@/components/dashboard/EduKpiExplainModal'
 import type { Municipio } from '@/types'
 
 interface EduDashboardProps {
@@ -283,7 +283,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
       {data && !loading && (
         <>
           {/* Modal de explicação */}
-          <KpiExplainModal explain={explain} onClose={() => setExplain(null)} />
+          <EduKpiExplainModal explain={explain} onClose={() => setExplain(null)} />
 
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
