@@ -15,17 +15,17 @@ export function EduLandingPage({ onEnterModule, onBackToMain }: EduLandingPagePr
 
       {/* ── Header ── */}
       <header className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between gap-3 sm:gap-6">
+          <div className="flex items-center gap-3 sm:gap-4">
             <img
               src={logo1}
               alt="SICM"
-              className="h-12 w-auto object-contain shrink-0"
+              className="h-9 sm:h-12 w-auto object-contain shrink-0"
               onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
             <div>
               <p className="text-[10px] font-bold text-[#1066C6] uppercase tracking-[0.18em]">SICM</p>
-              <h1 className="text-base font-extrabold text-gray-900 leading-tight">
+              <h1 className="text-sm sm:text-base font-extrabold text-gray-900 leading-tight">
                 Sistema de Informações de Custos Municipais
               </h1>
             </div>
@@ -44,13 +44,13 @@ export function EduLandingPage({ onEnterModule, onBackToMain }: EduLandingPagePr
       </header>
 
       {/* ── Hero ── */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-16">
-        <div className="text-center mb-10 max-w-lg">
-          <div className="w-36 h-36 mx-auto mb-6 rounded-2xl bg-[#AECBE6]/20 border border-[#AECBE6]/40 flex items-center justify-center overflow-hidden shadow-inner">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-10 sm:py-16">
+        <div className="text-center mb-8 sm:mb-10 max-w-lg">
+          <div className="w-28 h-28 sm:w-36 sm:h-36 mx-auto mb-4 sm:mb-6 rounded-2xl bg-[#AECBE6]/20 border border-[#AECBE6]/40 flex items-center justify-center overflow-hidden shadow-inner">
             <img
               src={logoSicmEdu}
               alt="SICM-Educação"
-              className="w-32 h-32 object-contain"
+              className="w-24 h-24 sm:w-32 sm:h-32 object-contain"
               onError={(e) => {
                 e.currentTarget.style.display = 'none'
                 const p = e.currentTarget.parentElement
@@ -58,10 +58,10 @@ export function EduLandingPage({ onEnterModule, onBackToMain }: EduLandingPagePr
               }}
             />
           </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight tracking-tight">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight tracking-tight">
             <span className="text-[#1066C6]">SICM</span>-Educação
           </h2>
-          <p className="text-gray-500 mt-3 text-base leading-relaxed">
+          <p className="text-gray-500 mt-2 sm:mt-3 text-sm sm:text-base leading-relaxed">
             Gestão de custos da rede municipal de ensino
           </p>
           <p className="text-gray-400 mt-2 text-sm leading-relaxed max-w-md mx-auto">

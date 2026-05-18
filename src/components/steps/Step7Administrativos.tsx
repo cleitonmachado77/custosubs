@@ -169,8 +169,8 @@ export function Step7Administrativos({ items, onChange }: Step7Props) {
           </div>
         ) : (
           <div className="space-y-2">
-            {/* Header */}
-            <div className="grid grid-cols-[1fr_11rem_2.5rem] gap-3 px-3">
+            {/* Header — desktop only */}
+            <div className="hidden sm:grid grid-cols-[1fr_11rem_2.5rem] gap-3 px-3">
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Descrição</span>
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Valor (R$)</span>
               <span />
@@ -179,25 +179,30 @@ export function Step7Administrativos({ items, onChange }: Step7Props) {
             {extras.map((item, index) => (
               <div
                 key={index}
-                className="grid grid-cols-[1fr_11rem_2.5rem] gap-3 items-end p-3 rounded-lg border border-purple-100 bg-purple-50"
+                className="flex flex-col sm:grid sm:grid-cols-[1fr_11rem_2.5rem] gap-2 sm:gap-3 sm:items-end p-3 rounded-lg border border-purple-100 bg-purple-50"
               >
                 <Input
+                  label={index === 0 ? undefined : undefined}
                   value={item.nome}
                   onChange={(e) => updateExtra(index, 'nome', e.target.value)}
                   placeholder="Ex: Aluguel, Combustível, Limpeza..."
                 />
-                <CurrencyInput
-                  value={item.valor}
-                  onChange={(val) => updateExtra(index, 'valor', val)}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeExtra(index)}
-                  className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  aria-label="Remover item"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1 sm:flex-none sm:w-full">
+                    <CurrencyInput
+                      value={item.valor}
+                      onChange={(val) => updateExtra(index, 'valor', val)}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeExtra(index)}
+                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                    aria-label="Remover item"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

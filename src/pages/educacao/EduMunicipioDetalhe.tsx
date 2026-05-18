@@ -272,19 +272,19 @@ export function EduMunicipioDetalhe({ municipio, onBack, onLancar }: EduMunicipi
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-3">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onBack}
-              className="p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
+              className="p-1.5 sm:p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
               aria-label="Voltar"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
             </button>
-            <div className="flex-1">
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Município</p>
-              <h1 className="text-lg font-bold text-gray-900 leading-tight">{municipio.nome}</h1>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wide">Município</p>
+              <h1 className="text-base sm:text-lg font-bold text-gray-900 leading-tight truncate">{municipio.nome}</h1>
             </div>
             <div className="hidden sm:flex items-center gap-3">
               <div className="text-right">
@@ -299,20 +299,20 @@ export function EduMunicipioDetalhe({ municipio, onBack, onLancar }: EduMunicipi
         </div>
       </header>
 
-      <div className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 space-y-6">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
 
         {/* Seletor de período */}
         <Card padding="sm">
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-2 text-gray-600">
-              <div className="w-8 h-8 rounded-lg bg-[#1066C6]/10 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-[#1066C6]/10 flex items-center justify-center shrink-0">
                 <Calendar className="w-4 h-4 text-[#1066C6]" />
               </div>
               <span className="text-sm font-semibold text-gray-700">Novo lançamento — período:</span>
             </div>
             <div className="flex items-center gap-2">
-              <Select value={mes} onChange={(e) => setMes(e.target.value)} options={MESES_OPTIONS} className="w-36" />
-              <Select value={ano} onChange={(e) => setAno(e.target.value)} options={ANOS_OPTIONS} className="w-24" />
+              <Select value={mes} onChange={(e) => setMes(e.target.value)} options={MESES_OPTIONS} className="flex-1 sm:w-36" />
+              <Select value={ano} onChange={(e) => setAno(e.target.value)} options={ANOS_OPTIONS} className="w-20 sm:w-24" />
             </div>
             <p className="text-xs text-gray-400 ml-auto hidden sm:block">Selecione o período antes de lançar dados</p>
           </div>

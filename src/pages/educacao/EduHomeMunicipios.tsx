@@ -175,39 +175,40 @@ export function EduHomeMunicipios({ onSelectMunicipio }: EduHomeMunicipiosProps)
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Bem-vindo(a)!</h1>
-              <p className="text-sm text-gray-500 mt-0.5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-3 sm:gap-4">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900">Bem-vindo(a)!</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5 hidden sm:block">
                 Selecione um município para gerenciar suas escolas e lançamentos de custos
               </p>
             </div>
-            <Button onClick={() => setShowForm(true)} type="button" size="md" className="bg-[#1066C6] hover:bg-[#072F76] focus:ring-[#1066C6]">
+            <Button onClick={() => setShowForm(true)} type="button" size="md" className="bg-[#1066C6] hover:bg-[#072F76] focus:ring-[#1066C6] shrink-0">
               <Plus className="w-4 h-4" />
-              Novo Município
+              <span className="hidden sm:inline">Novo Município</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
+      <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-8">
         {/* Stats rápidas */}
         {municipios.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Municípios</p>
-              <p className="text-3xl font-bold text-[#1066C6]">{municipios.length}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-[#1066C6]">{municipios.length}</p>
               <p className="text-xs text-gray-400 mt-1">cadastrados</p>
             </div>
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Escolas</p>
-              <p className="text-3xl font-bold text-[#072F76]">
+              <p className="text-2xl sm:text-3xl font-bold text-[#072F76]">
                 {municipios.reduce((s, m) => s + m.totalEscolas, 0)}
               </p>
               <p className="text-xs text-gray-400 mt-1">unidades cadastradas</p>
             </div>
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 col-span-2 sm:col-span-1">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 col-span-2 sm:col-span-1">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Habitantes</p>
               <p className="text-3xl font-bold text-gray-800">
                 {municipios.reduce((s, m) => s + m.habitantes, 0).toLocaleString('pt-BR')}

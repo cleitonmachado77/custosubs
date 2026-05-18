@@ -204,22 +204,22 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
   }
 
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-6">
+    <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 flex items-center gap-2">
-            <GraduationCap className="w-7 h-7 text-[#1066C6]" />
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 flex items-center gap-2">
+            <GraduationCap className="w-6 sm:w-7 h-6 sm:h-7 text-[#1066C6]" />
             Dashboard Educação
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Indicadores de custos e desempenho da rede municipal de ensino</p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Indicadores de custos e desempenho da rede municipal de ensino</p>
         </div>
         {data && data.custoTotal > 0 && (
           <button
             type="button"
             onClick={exportarTxt}
             title="Baixar relatório em texto"
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:text-gray-700 hover:shadow-sm transition-all duration-150"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:text-gray-700 hover:shadow-sm transition-all duration-150 self-start sm:self-auto"
           >
             <Download className="w-3.5 h-3.5" />
             Exportar TXT
@@ -228,8 +228,8 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 flex flex-wrap gap-4 items-end shadow-sm">
-        <div className="flex-1 min-w-[200px]">
+      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 mb-4 sm:mb-6 grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-4 items-end shadow-sm">
+        <div className="col-span-2 sm:flex-1 sm:min-w-[200px]">
           <label className="text-xs font-semibold text-gray-600 mb-1 block">Município</label>
           <select
             value={selectedMunicipio}
@@ -241,7 +241,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
             ))}
           </select>
         </div>
-        <div className="w-40">
+        <div className="sm:w-40">
           <label className="text-xs font-semibold text-gray-600 mb-1 block">Ano</label>
           <select
             value={ano}
@@ -253,7 +253,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
             ))}
           </select>
         </div>
-        <div className="w-44">
+        <div className="sm:w-44">
           <label className="text-xs font-semibold text-gray-600 mb-1 block">Período</label>
           <select
             value={mes}
@@ -286,7 +286,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
           <EduKpiExplainModal explain={explain} onClose={() => setExplain(null)} />
 
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <KpiCard
               icon={<School className="w-5 h-5" />}
               label="Escolas"
@@ -318,7 +318,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
           </div>
 
           {/* KPIs secundários */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <KpiCard
               icon={<BookOpen className="w-5 h-5" />}
               label="Custo Pedagógico/Aluno"
@@ -354,7 +354,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
           </div>
 
           {/* Gráficos */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
             {/* Pizza — Distribuição de custos */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
               <div className="mb-4 pb-3 border-b border-gray-50">
@@ -439,7 +439,7 @@ export function EduDashboard({ onBack: _onBack }: EduDashboardProps) {
           </div>
 
           {/* Gráficos Linha 2 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
             {/* Barras empilhadas — Custo por Escola por Categoria */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
               <div className="mb-4 pb-3 border-b border-gray-50">

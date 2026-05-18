@@ -105,8 +105,8 @@ export function FuncionariosList({ items, onChange, numEquipes = 0 }: Funcionari
         </div>
       ) : (
         <div className="space-y-2">
-          {/* Header */}
-          <div className={`grid ${gridCols} gap-3 px-3`}>
+          {/* Header — desktop only */}
+          <div className={`hidden md:grid ${gridCols} gap-3 px-3`}>
             <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Nome</span>
             <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Cargo</span>
             <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Vínculo</span>
@@ -118,56 +118,124 @@ export function FuncionariosList({ items, onChange, numEquipes = 0 }: Funcionari
           </div>
 
           {items.map((item, index) => (
-            <div
-              key={index}
-              className={`grid ${gridCols} gap-3 items-end p-3 rounded-lg border border-indigo-100 bg-indigo-50`}
-            >
-              <Input
-                value={item.nome}
-                onChange={(e) => updateItem(index, 'nome', e.target.value)}
-                placeholder="Nome completo"
-              />
-              <Input
-                value={item.cargo}
-                onChange={(e) => updateItem(index, 'cargo', e.target.value)}
-                placeholder="Ex: Médico, ACS..."
-              />
-              <div className={[
-                'rounded-xl border-2 transition-colors',
-                item.vinculo === 'concursado'   ? 'border-blue-200'   : '',
-                item.vinculo === 'clt'          ? 'border-amber-200'  : '',
-                item.vinculo === 'terceirizado' ? 'border-teal-200'   : '',
-              ].join(' ')}>
-                <Select
-                  value={item.vinculo}
-                  onChange={(e) => updateItem(index, 'vinculo', e.target.value as VinculoFuncionario)}
-                  options={VINCULO_OPTIONS}
+            <div key={index}>
+              {/* Desktop: grid layout */}
+              <div
+                className={`hidden md:grid ${gridCols} gap-3 items-end p-3 rounded-lg border border-indigo-100 bg-indigo-50`}
+              >
+                <Input
+                  value={item.nome}
+                  onChange={(e) => updateItem(index, 'nome', e.target.value)}
+                  placeholder="Nome completo"
                 />
-              </div>
-              {temEquipes && (
+                <Input
+                  value={item.cargo}
+                  onChange={(e) => updateItem(index, 'cargo', e.target.value)}
+                  placeholder="Ex: Médico, ACS..."
+                />
                 <div className={[
                   'rounded-xl border-2 transition-colors',
-                  (item.equipe ?? 0) > 0 ? 'border-green-200' : 'border-gray-200',
+                  item.vinculo === 'concursado'   ? 'border-blue-200'   : '',
+                  item.vinculo === 'clt'          ? 'border-amber-200'  : '',
+                  item.vinculo === 'terceirizado' ? 'border-teal-200'   : '',
                 ].join(' ')}>
                   <Select
-                    value={String(item.equipe ?? 0)}
-                    onChange={(e) => updateItem(index, 'equipe', parseInt(e.target.value))}
-                    options={equipeOptions}
+                    value={item.vinculo}
+                    onChange={(e) => updateItem(index, 'vinculo', e.target.value as VinculoFuncionario)}
+                    options={VINCULO_OPTIONS}
                   />
                 </div>
-              )}
-              <CurrencyInput
-                value={item.salario}
-                onChange={(val) => updateItem(index, 'salario', val)}
-              />
-              <button
-                type="button"
-                onClick={() => removeItem(index)}
-                className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                aria-label="Remover funcionário"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+                {temEquipes && (
+                  <div className={[
+                    'rounded-xl border-2 transition-colors',
+                    (item.equipe ?? 0) > 0 ? 'border-green-200' : 'border-gray-200',
+                  ].join(' ')}>
+                    <Select
+                      value={String(item.equipe ?? 0)}
+                      onChange={(e) => updateItem(index, 'equipe', parseInt(e.target.value))}
+                      options={equipeOptions}
+                    />
+                  </div>
+                )}
+                <CurrencyInput
+                  value={item.salario}
+                  onChange={(val) => updateItem(index, 'salario', val)}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeItem(index)}
+                  className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  aria-label="Remover funcionário"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Mobile: card layout */}
+              <div className="md:hidden p-3 rounded-lg border border-indigo-100 bg-indigo-50 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-xs font-semibold text-indigo-600">#{index + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(index)}
+                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    aria-label="Remover funcionário"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  <Input
+                    label="Nome"
+                    value={item.nome}
+                    onChange={(e) => updateItem(index, 'nome', e.target.value)}
+                    placeholder="Nome completo"
+                  />
+                  <Input
+                    label="Cargo"
+                    value={item.cargo}
+                    onChange={(e) => updateItem(index, 'cargo', e.target.value)}
+                    placeholder="Ex: Médico, ACS..."
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">Vínculo</label>
+                      <div className={[
+                        'rounded-xl border-2 transition-colors',
+                        item.vinculo === 'concursado'   ? 'border-blue-200'   : '',
+                        item.vinculo === 'clt'          ? 'border-amber-200'  : '',
+                        item.vinculo === 'terceirizado' ? 'border-teal-200'   : '',
+                      ].join(' ')}>
+                        <Select
+                          value={item.vinculo}
+                          onChange={(e) => updateItem(index, 'vinculo', e.target.value as VinculoFuncionario)}
+                          options={VINCULO_OPTIONS}
+                        />
+                      </div>
+                    </div>
+                    {temEquipes && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block">Equipe</label>
+                        <div className={[
+                          'rounded-xl border-2 transition-colors',
+                          (item.equipe ?? 0) > 0 ? 'border-green-200' : 'border-gray-200',
+                        ].join(' ')}>
+                          <Select
+                            value={String(item.equipe ?? 0)}
+                            onChange={(e) => updateItem(index, 'equipe', parseInt(e.target.value))}
+                            options={equipeOptions}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <CurrencyInput
+                    label="Salário"
+                    value={item.salario}
+                    onChange={(val) => updateItem(index, 'salario', val)}
+                  />
+                </div>
+              </div>
             </div>
           ))}
         </div>

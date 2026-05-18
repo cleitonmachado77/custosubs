@@ -72,7 +72,7 @@ export function DynamicItemList({
             <div
               key={index}
               className={cn(
-                'flex items-end gap-3 p-3 rounded-lg border',
+                'flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3 p-3 rounded-lg border',
                 colorClass
               )}
             >
@@ -84,21 +84,23 @@ export function DynamicItemList({
                   placeholder={namePlaceholder}
                 />
               </div>
-              <div className="w-44">
-                <CurrencyInput
-                  label={index === 0 ? 'Valor (R$)' : undefined}
-                  value={item.valor}
-                  onChange={(val) => updateItem(index, 'valor', val)}
-                />
+              <div className="flex items-end gap-2 sm:gap-3">
+                <div className="flex-1 sm:flex-none sm:w-44">
+                  <CurrencyInput
+                    label={index === 0 ? 'Valor (R$)' : undefined}
+                    value={item.valor}
+                    onChange={(val) => updateItem(index, 'valor', val)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeItem(index)}
+                  className="mb-0.5 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                  aria-label="Remover item"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => removeItem(index)}
-                className="mb-0.5 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                aria-label="Remover item"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
             </div>
           ))}
         </div>

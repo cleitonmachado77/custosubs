@@ -262,10 +262,10 @@ export function ProducaoList({ items, onChange, funcionarios = [] }: ProducaoLis
         </div>
       ) : (
         <div className="space-y-3">
-          {/* Header */}
+          {/* Header — desktop only */}
           <div
             className={[
-              'grid gap-3 px-3',
+              'hidden sm:grid gap-3 px-3',
               temFuncionarios
                 ? 'grid-cols-[1fr_9rem_1fr_2.5rem]'
                 : 'grid-cols-[1fr_10rem_2.5rem]',
@@ -280,44 +280,87 @@ export function ProducaoList({ items, onChange, funcionarios = [] }: ProducaoLis
           </div>
 
           {items.map((item, index) => (
-            <div
-              key={index}
-              className={[
-                'grid gap-3 items-start p-3 rounded-lg border border-emerald-100 bg-emerald-50',
-                temFuncionarios
-                  ? 'grid-cols-[1fr_9rem_1fr_2.5rem]'
-                  : 'grid-cols-[1fr_10rem_2.5rem]',
-              ].join(' ')}
-            >
-              <Input
-                value={item.evento}
-                onChange={(e) => updateItem(index, { evento: e.target.value })}
-                placeholder="Ex: Consulta Médica, Vacinação..."
-              />
-              <Input
-                type="number"
-                min={0}
-                value={item.quantidade_atendimentos || ''}
-                onChange={(e) =>
-                  updateItem(index, { quantidade_atendimentos: parseInt(e.target.value) || 0 })
-                }
-                placeholder="0"
-              />
-              {temFuncionarios && (
-                <ResponsaveisSelector
-                  funcionarios={funcionarios}
-                  selecionados={item.responsaveis ?? []}
-                  onChange={(nomes) => updateItem(index, { responsaveis: nomes })}
-                />
-              )}
-              <button
-                type="button"
-                onClick={() => removeItem(index)}
-                className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-0.5"
-                aria-label="Remover evento"
+            <div key={index}>
+              {/* Desktop grid */}
+              <div
+                className={[
+                  'hidden sm:grid gap-3 items-start p-3 rounded-lg border border-emerald-100 bg-emerald-50',
+                  temFuncionarios
+                    ? 'grid-cols-[1fr_9rem_1fr_2.5rem]'
+                    : 'grid-cols-[1fr_10rem_2.5rem]',
+                ].join(' ')}
               >
-                <Trash2 className="w-4 h-4" />
-              </button>
+                <Input
+                  value={item.evento}
+                  onChange={(e) => updateItem(index, { evento: e.target.value })}
+                  placeholder="Ex: Consulta Médica, Vacinação..."
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  value={item.quantidade_atendimentos || ''}
+                  onChange={(e) =>
+                    updateItem(index, { quantidade_atendimentos: parseInt(e.target.value) || 0 })
+                  }
+                  placeholder="0"
+                />
+                {temFuncionarios && (
+                  <ResponsaveisSelector
+                    funcionarios={funcionarios}
+                    selecionados={item.responsaveis ?? []}
+                    onChange={(nomes) => updateItem(index, { responsaveis: nomes })}
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeItem(index)}
+                  className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-0.5"
+                  aria-label="Remover evento"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Mobile card */}
+              <div className="sm:hidden p-3 rounded-lg border border-emerald-100 bg-emerald-50 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-xs font-semibold text-emerald-600">#{index + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(index)}
+                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    aria-label="Remover evento"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <Input
+                  label="Evento"
+                  value={item.evento}
+                  onChange={(e) => updateItem(index, { evento: e.target.value })}
+                  placeholder="Ex: Consulta Médica, Vacinação..."
+                />
+                <Input
+                  label="Qtd. Atendimentos"
+                  type="number"
+                  min={0}
+                  value={item.quantidade_atendimentos || ''}
+                  onChange={(e) =>
+                    updateItem(index, { quantidade_atendimentos: parseInt(e.target.value) || 0 })
+                  }
+                  placeholder="0"
+                />
+                {temFuncionarios && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Responsáveis</label>
+                    <ResponsaveisSelector
+                      funcionarios={funcionarios}
+                      selecionados={item.responsaveis ?? []}
+                      onChange={(nomes) => updateItem(index, { responsaveis: nomes })}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>

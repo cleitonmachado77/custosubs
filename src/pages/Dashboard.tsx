@@ -427,36 +427,36 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex-1">
-              <h1 className="text-xl font-bold text-gray-900">Bem-vindo(a)!</h1>
-              <p className="text-sm text-gray-500 mt-0.5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900">Bem-vindo(a)!</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
                 Indicadores de custos e saúde das UBS
               </p>
             </div>
 
             {/* Filtros */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:flex-wrap">
               <Select
                 value={municipioId}
                 onChange={(e) => setMunicipioId(e.target.value)}
                 options={municipios.map((m) => ({ value: m.id, label: `${m.nome} — ${m.estado}` }))}
                 placeholder={loadingMun ? 'Carregando...' : 'Selecione o município'}
                 disabled={loadingMun}
-                className="w-56"
+                className="col-span-2 sm:w-56"
               />
               <Select
                 value={mes}
                 onChange={(e) => setMes(e.target.value)}
                 options={MESES}
-                className="w-44"
+                className="sm:w-44"
               />
               <Select
                 value={ano}
                 onChange={(e) => setAno(e.target.value)}
                 options={ANOS}
-                className="w-24"
+                className="sm:w-24"
               />
               <Button
                 variant="primary"
@@ -471,6 +471,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                     .finally(() => setLoading(false))
                 }}
                 disabled={!municipioId || loading}
+                className="col-span-2 sm:col-span-1"
               >
                 <RefreshCw className="w-4 h-4" />
                 Atualizar
@@ -480,7 +481,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-6 space-y-6">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Estado vazio */}
         {!municipioId && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -545,7 +546,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
             </div>
 
             {/* ── KPIs Linha 1 — Estrutura ─────────────────────────── */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               <KpiCard
                 title="Total de UBS"
                 value={String(data.totalUbs)}

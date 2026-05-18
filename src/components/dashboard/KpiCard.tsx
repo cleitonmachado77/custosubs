@@ -33,7 +33,7 @@ export function KpiCard({ title, value, subtitle, icon, color, trend, onClick }:
       onClick={onClick}
       onKeyDown={clickable ? (e) => e.key === 'Enter' && onClick?.() : undefined}
       className={cn(
-        'relative bg-white rounded-2xl border border-gray-100 shadow-sm p-4 transition-all duration-200',
+        'relative bg-white rounded-2xl border border-gray-100 shadow-sm p-3 sm:p-4 transition-all duration-200',
         clickable
           ? 'cursor-pointer hover:shadow-lg hover:border-gray-200 hover:-translate-y-0.5 group'
           : 'hover:shadow-md'
@@ -41,7 +41,7 @@ export function KpiCard({ title, value, subtitle, icon, color, trend, onClick }:
     >
       {/* Ícone de info — aparece no hover quando clicável */}
       {clickable && (
-        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+        <div className="absolute top-2 sm:top-3 right-2 sm:right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
           <Info className="w-3.5 h-3.5 text-gray-300" />
         </div>
       )}
@@ -49,7 +49,7 @@ export function KpiCard({ title, value, subtitle, icon, color, trend, onClick }:
       {/* Ícone no topo */}
       <div
         className={cn(
-          'w-9 h-9 rounded-xl flex items-center justify-center mb-3 ring-4',
+          'w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-3 ring-2 sm:ring-4',
           c.icon,
           c.ring
         )}
@@ -58,21 +58,21 @@ export function KpiCard({ title, value, subtitle, icon, color, trend, onClick }:
       </div>
 
       {/* Título */}
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide leading-snug mb-1">
+      <p className="text-[10px] sm:text-xs font-semibold text-gray-400 uppercase tracking-wide leading-snug mb-0.5 sm:mb-1">
         {title}
       </p>
 
       {/* Valor */}
-      <p className={cn('text-xl font-bold leading-tight break-all', c.value)}>
+      <p className={cn('text-base sm:text-xl font-bold leading-tight break-all', c.value)}>
         {value}
       </p>
 
       {/* Subtítulo */}
       {subtitle && (
-        <p className="text-xs text-gray-400 mt-1 leading-snug">{subtitle}</p>
+        <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1 leading-snug">{subtitle}</p>
       )}
       {trend && (
-        <p className="text-xs text-gray-500 mt-1">{trend}</p>
+        <p className="text-[10px] sm:text-xs text-gray-500 mt-1">{trend}</p>
       )}
 
       {/* Hint "clique para detalhes" */}

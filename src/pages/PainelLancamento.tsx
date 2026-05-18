@@ -229,36 +229,36 @@ export function PainelLancamento({ municipio, ubs, mes, ano, onBack }: PainelLan
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
             <button
               type="button"
               onClick={handleBack}
-              className="p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
+              className="p-1.5 sm:p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
               aria-label="Voltar"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
             </button>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 text-xs text-gray-400 mb-0.5">
-                <span>{municipio.nome}</span>
+              <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-gray-400 mb-0.5">
+                <span className="truncate">{municipio.nome}</span>
                 <span>›</span>
                 <span className="truncate text-gray-500 font-medium">{ubs.nome}</span>
               </div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold text-gray-900 leading-tight">
+                <h1 className="text-sm sm:text-base font-bold text-gray-900 leading-tight">
                   {modoEdicao ? 'Editar Lançamento' : 'Lançamento Mensal'}
                 </h1>
                 {modoEdicao && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                  <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
                     Editando
                   </span>
                 )}
               </div>
             </div>
-            <div className="shrink-0 bg-gradient-to-br from-[#01884d]/10 to-[#01884d]/20 border border-[#01884d]/20 rounded-xl px-4 py-2 text-center">
-              <p className="text-xs text-[#01884d] font-semibold leading-none">Período</p>
-              <p className="text-sm font-bold text-[#016038] mt-0.5">
+            <div className="shrink-0 bg-gradient-to-br from-[#01884d]/10 to-[#01884d]/20 border border-[#01884d]/20 rounded-lg sm:rounded-xl px-2 sm:px-4 py-1.5 sm:py-2 text-center">
+              <p className="text-[10px] sm:text-xs text-[#01884d] font-semibold leading-none">Período</p>
+              <p className="text-xs sm:text-sm font-bold text-[#016038] mt-0.5">
                 {MESES_LABEL[mes]}/{ano}
               </p>
             </div>
@@ -272,8 +272,8 @@ export function PainelLancamento({ municipio, ubs, mes, ano, onBack }: PainelLan
         </div>
       </header>
 
-      <div className="flex-1 max-w-5xl mx-auto w-full px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Formulário */}
           <div className="lg:col-span-2">
             <Card>

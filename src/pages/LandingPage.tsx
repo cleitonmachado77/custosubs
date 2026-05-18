@@ -15,19 +15,19 @@ export function LandingPage({ onEnterModule }: LandingPageProps) {
 
       {/* ── Header ── */}
       <header className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between gap-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between gap-3 sm:gap-6">
 
           {/* Identidade */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <img
               src={logo1}
               alt="SICM"
-              className="h-12 w-auto object-contain shrink-0"
+              className="h-9 sm:h-12 w-auto object-contain shrink-0"
               onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
             <div>
               <p className="text-[10px] font-bold text-[#01884d] uppercase tracking-[0.18em]">SICM</p>
-              <h1 className="text-base font-extrabold text-gray-900 leading-tight">
+              <h1 className="text-sm sm:text-base font-extrabold text-gray-900 leading-tight">
                 Sistema de Informações de Custos Municipais
               </h1>
             </div>
@@ -36,26 +36,26 @@ export function LandingPage({ onEnterModule }: LandingPageProps) {
       </header>
 
       {/* ── Hero ── */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-16">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-10 sm:py-16">
 
         {/* Título central */}
-        <div className="text-center mb-12 max-w-lg">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight tracking-tight">
+        <div className="text-center mb-8 sm:mb-12 max-w-lg">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight tracking-tight">
             Bem-vindo ao <span className="text-[#01884d]">SICM</span>
           </h2>
-          <p className="text-gray-500 mt-3 text-base leading-relaxed">
+          <p className="text-gray-500 mt-2 sm:mt-3 text-sm sm:text-base leading-relaxed">
             Selecione o módulo que deseja acessar
           </p>
         </div>
 
         {/* ── Cards de módulos ── */}
-        <div className="flex flex-wrap justify-center gap-6 w-full max-w-3xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full max-w-3xl">
 
           {/* SICM-Saúde — ativo */}
           <button
             type="button"
             onClick={() => onEnterModule('saude')}
-            className="group relative flex flex-col items-center gap-4 bg-white border-2 border-gray-100 rounded-2xl p-8 w-60 shadow-sm hover:shadow-xl hover:border-[#01884d]/30 hover:-translate-y-1 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-[#01884d]/20"
+            className="group relative flex flex-col items-center gap-3 sm:gap-4 bg-white border-2 border-gray-100 rounded-2xl p-6 sm:p-8 w-full shadow-sm hover:shadow-xl hover:border-[#01884d]/30 hover:-translate-y-1 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-[#01884d]/20"
           >
             {/* Badge disponível */}
             <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#01884d] text-white text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider shadow">
@@ -99,7 +99,7 @@ export function LandingPage({ onEnterModule }: LandingPageProps) {
           <button
             type="button"
             onClick={() => onEnterModule('educacao')}
-            className="group relative flex flex-col items-center gap-4 bg-white border-2 border-gray-100 rounded-2xl p-8 w-60 shadow-sm hover:shadow-xl hover:border-[#1066C6]/30 hover:-translate-y-1 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-[#1066C6]/20"
+            className="group relative flex flex-col items-center gap-3 sm:gap-4 bg-white border-2 border-gray-100 rounded-2xl p-6 sm:p-8 w-full shadow-sm hover:shadow-xl hover:border-[#1066C6]/30 hover:-translate-y-1 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-[#1066C6]/20"
           >
             {/* Badge disponível */}
             <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#1066C6] text-white text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider shadow">
@@ -141,7 +141,7 @@ export function LandingPage({ onEnterModule }: LandingPageProps) {
 
           {/* Módulo em breve — Infraestrutura */}
           <div
-            className="relative flex flex-col items-center gap-4 bg-white border-2 border-dashed border-gray-200 rounded-2xl p-8 w-60 opacity-50 cursor-not-allowed select-none"
+            className="relative flex flex-col items-center gap-3 sm:gap-4 bg-white border-2 border-dashed border-gray-200 rounded-2xl p-6 sm:p-8 w-full opacity-50 cursor-not-allowed select-none"
           >
             {/* Badge em breve */}
             <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-200 text-gray-500 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
@@ -170,7 +170,7 @@ export function LandingPage({ onEnterModule }: LandingPageProps) {
 
       {/* ── Footer ── */}
       <footer className="bg-white border-t border-gray-100 py-4">
-        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between flex-wrap gap-2">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between flex-wrap gap-2">
           <p className="text-xs text-gray-400">
             © {new Date().getFullYear()} Sistema de Informações de Custos Municipais
           </p>
