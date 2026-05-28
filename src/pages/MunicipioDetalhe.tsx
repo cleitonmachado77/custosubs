@@ -12,7 +12,6 @@ import { getUBSByMunicipio, createUBS, updateUBS, deleteUBS } from '@/services/u
 import {
   getSecretariasByMunicipio,
   createSecretaria,
-  updateSecretaria,
   deleteSecretaria,
 } from '@/services/secretarias'
 import {

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { MessageCircle, Send, X, Bot, User, Loader2, Sparkles, Trash2 } from 'lucide-react'
+import { Send, X, Bot, User, Loader2, Sparkles, Trash2 } from 'lucide-react'
 import { askIA, type ChatMessage } from '@/services/ia-chat'
 
 export function ChatIA() {

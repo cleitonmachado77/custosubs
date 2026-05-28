@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import {
-  AlertTriangle, ArrowLeft, Calendar, Check,
+  AlertTriangle, ArrowLeft, Calendar,
   ChevronDown, ChevronRight, ChevronUp,
-  Building2, MapPin, Pencil, Plus, Trash2, X,
+  Building2, MapPin, Pencil, Plus, Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
-import { getUBSBySecretaria, createUBS, updateUBS, deleteUBS } from '@/services/ubs'
+import { getUBSBySecretaria, createUBS, deleteUBS } from '@/services/ubs'
 import {
   getPeriodosLancados,
   deleteLancamentoCompleto,

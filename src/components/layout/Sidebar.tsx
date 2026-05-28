@@ -2,7 +2,7 @@ import { Activity, Building2, ChevronLeft, FileSpreadsheet, LayoutDashboard, Map
 import { useState, useEffect } from 'react'
 import logo1 from '/SICM1.png'
 
-type Screen = 'home' | 'municipio' | 'lancamento' | 'dashboard' | 'importar'
+type Screen = 'home' | 'municipio' | 'lancamento' | 'dashboard' | 'importar' | 'secretaria' | 'lancamento-secretaria' | 'lancamento-outra-unidade'
 
 interface SidebarProps {
   activeScreen: Screen
@@ -33,7 +33,7 @@ const navItems = [
 
 export function Sidebar({ activeScreen, onNavigate, onBackToLanding }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const activeNav = activeScreen === 'lancamento' || activeScreen === 'municipio' ? 'home' : activeScreen
+  const activeNav = activeScreen === 'lancamento' || activeScreen === 'municipio' || activeScreen === 'secretaria' || activeScreen === 'lancamento-secretaria' || activeScreen === 'lancamento-outra-unidade' ? 'home' : activeScreen
 
   // Fecha sidebar ao navegar no mobile
   function handleNav(screen: 'home' | 'dashboard' | 'importar') {
