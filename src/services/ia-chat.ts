@@ -112,7 +112,10 @@ async function callGemini(messages: GeminiMessage[]): Promise<string> {
     if (response.status === 429) {
       throw new Error('Limite de requisições atingido. Aguarde alguns segundos e tente novamente.')
     }
-    throw new Error(`Erro na API: ${response.status} - ${err}`)
+    if (response.status === 503) {
+      throw new Error('O serviço de IA está temporariamente sobrecarregado. Tente novamente em alguns segundos.')
+    }
+    throw new Error('Não foi possível processar sua pergunta no momento. Tente novamente.')
   }
 
   const result = await response.json()
