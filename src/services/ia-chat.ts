@@ -49,10 +49,23 @@ export interface ChatMessage {
 
 // Extrai SQL de uma resposta do modelo
 function extractSQL(text: string): string | null {
+  // Tenta capturar bloco completo ```sql ... ```
   const match = text.match(/```sql\s*([\s\S]*?)```/)
   if (match) {
-    // Remove ponto-e-vírgula final e espaços extras
     return match[1].trim().replace(/;\s*$/, '')
+  }
+  // Tenta capturar bloco incompleto (sem fechamento ```)
+  const partial = text.match(/```sql\s*([\s\S]+)$/)
+  if (partial) {
+    const sql = partial[1].trim().replace(/;\s*$/, '')
+    if (sql.toUpperCase().startsWith('SELECT') || sql.toUpperCase().startsWith('WITH')) {
+      return sql
+    }
+  }
+  // Tenta capturar SQL solto (sem bloco de código)
+  const loose = text.match(/(SELECT\s+[\s\S]+?FROM\s+[\s\S]+?)(?:\n\n|$)/i)
+  if (loose) {
+    return loose[1].trim().replace(/;\s*$/, '')
   }
   return null
 }
@@ -125,11 +138,12 @@ export async function askIA(
   if (!sql) {
     // Sem SQL — resposta direta, mas limpa qualquer resquício técnico
     const cleanResponse = firstResponse
+      .replace(/```sql[\s\S]*/g, '')
       .replace(/```[\s\S]*?```/g, '')
       .replace(/SELECT\s+[\s\S]*?FROM[\s\S]*?(?:WHERE|GROUP|ORDER|LIMIT|$)/gi, '')
       .replace(/\b(ubs_id|municipio_id|secretaria_id|created_at|updated_at)\b/gi, '')
       .trim()
-    return { answer: cleanResponse || 'Não entendi sua pergunta. Pode reformular?' }
+    return { answer: cleanResponse || 'Pode reformular sua pergunta? Preciso de mais detalhes para buscar os dados.' }
   }
 
   // 3. Valida segurança do SQL
