@@ -108,7 +108,7 @@ async function callGemini(messages: GeminiMessage[]): Promise<string> {
   })
 
   if (!response.ok) {
-    const err = await response.text()
+    await response.text()
     if (response.status === 429) {
       throw new Error('Limite de requisições atingido. Aguarde alguns segundos e tente novamente.')
     }
