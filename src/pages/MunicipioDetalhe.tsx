@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  AlertTriangle, ArrowLeft, Calendar, Check,
+  AlertTriangle, ArrowLeft, Building2, Calendar, Check,
   ChevronDown, ChevronRight, ChevronUp,
   MapPin, Pencil, Plus, Trash2, X,
 } from 'lucide-react'
@@ -10,12 +10,23 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { getUBSByMunicipio, createUBS, updateUBS, deleteUBS } from '@/services/ubs'
 import {
+  getSecretariasByMunicipio,
+  createSecretaria,
+  updateSecretaria,
+  deleteSecretaria,
+} from '@/services/secretarias'
+import {
+  getOutrasUnidadesByMunicipio,
+  createOutraUnidade,
+  deleteOutraUnidade,
+} from '@/services/outras-unidades'
+import {
   getPeriodosLancados,
   deleteLancamentoCompleto,
   type PeriodoLancado,
 } from '@/services/lancamentos'
 import { formatCurrency } from '@/lib/utils'
-import type { Municipio, UBS } from '@/types'
+import type { Municipio, OutraUnidadeSaude, SecretariaSaude, UBS } from '@/types'
 
 const MESES = [
   'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -33,6 +44,8 @@ interface MunicipioDetalheProps {
   municipio: Municipio
   onBack: () => void
   onLancar: (ubs: UBS, mes: number, ano: number) => void
+  onSelectSecretaria: (secretaria: SecretariaSaude) => void
+  onLancarOutraUnidade: (outraUnidade: OutraUnidadeSaude, mes: number, ano: number) => void
 }
 
 // ─── Histórico de lançamentos de uma UBS ─────────────────────────────────────
@@ -184,10 +197,34 @@ function HistoricoUBS({ ubs, onEditar }: HistoricoUBSProps) {
 }
 
 // ─── Página principal ─────────────────────────────────────────────────────────
-export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetalheProps) {
+export function MunicipioDetalhe({ municipio, onBack, onLancar, onSelectSecretaria, onLancarOutraUnidade }: MunicipioDetalheProps) {
   const [ubsList, setUbsList] = useState<UBS[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+
+  // Secretarias
+  const [secretarias, setSecretarias] = useState<SecretariaSaude[]>([])
+  const [loadingSecretarias, setLoadingSecretarias] = useState(true)
+  const [showSecretariaForm, setShowSecretariaForm] = useState(false)
+  const [secNome, setSecNome] = useState('')
+  const [secResponsavel, setSecResponsavel] = useState('')
+  const [secTelefone, setSecTelefone] = useState('')
+  const [savingSecretaria, setSavingSecretaria] = useState(false)
+  const [secError, setSecError] = useState('')
+  const [confirmDeleteSecId, setConfirmDeleteSecId] = useState<string | null>(null)
+  const [deletingSec, setDeletingSec] = useState(false)
+
+  // Outras Unidades de Saúde
+  const [outrasUnidades, setOutrasUnidades] = useState<OutraUnidadeSaude[]>([])
+  const [loadingOutras, setLoadingOutras] = useState(true)
+  const [showOutraForm, setShowOutraForm] = useState(false)
+  const [outraNome, setOutraNome] = useState('')
+  const [outraTipo, setOutraTipo] = useState('')
+  const [outraEndereco, setOutraEndereco] = useState('')
+  const [savingOutra, setSavingOutra] = useState(false)
+  const [outraError, setOutraError] = useState('')
+  const [confirmDeleteOutraId, setConfirmDeleteOutraId] = useState<string | null>(null)
+  const [deletingOutra, setDeletingOutra] = useState(false)
 
   const [mes, setMes] = useState(String(new Date().getMonth() + 1))
   const [ano, setAno] = useState(String(currentYear))
@@ -230,6 +267,101 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
   }
 
   useEffect(() => { loadUBS() }, [municipio.id])
+
+  // Secretarias
+  async function loadSecretarias() {
+    setLoadingSecretarias(true)
+    try {
+      const lista = await getSecretariasByMunicipio(municipio.id)
+      setSecretarias(lista)
+    } finally {
+      setLoadingSecretarias(false)
+    }
+  }
+
+  useEffect(() => { loadSecretarias() }, [municipio.id])
+
+  async function handleCreateSecretaria() {
+    if (!secNome.trim()) { setSecError('Informe o nome da secretaria.'); return }
+    setSavingSecretaria(true)
+    setSecError('')
+    try {
+      const nova = await createSecretaria({
+        nome: secNome.trim(),
+        responsavel: secResponsavel.trim() || null,
+        telefone: secTelefone.trim() || null,
+        municipio_id: municipio.id,
+      })
+      setShowSecretariaForm(false)
+      setSecNome(''); setSecResponsavel(''); setSecTelefone('')
+      setSecretarias((prev) => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)))
+    } catch {
+      setSecError('Erro ao salvar. Tente novamente.')
+    } finally {
+      setSavingSecretaria(false)
+    }
+  }
+
+  async function handleDeleteSecretaria(id: string) {
+    setDeletingSec(true)
+    try {
+      await deleteSecretaria(id)
+      setSecretarias((prev) => prev.filter((s) => s.id !== id))
+      setConfirmDeleteSecId(null)
+    } catch {
+      // silencia FK constraint
+    } finally {
+      setDeletingSec(false)
+    }
+  }
+
+  // Outras Unidades de Saúde
+  async function loadOutrasUnidades() {
+    setLoadingOutras(true)
+    try {
+      const lista = await getOutrasUnidadesByMunicipio(municipio.id)
+      setOutrasUnidades(lista)
+    } finally {
+      setLoadingOutras(false)
+    }
+  }
+
+  useEffect(() => { loadOutrasUnidades() }, [municipio.id])
+
+  async function handleCreateOutraUnidade() {
+    if (!outraNome.trim()) { setOutraError('Informe o nome da unidade.'); return }
+    if (!outraTipo.trim()) { setOutraError('Informe o tipo da unidade.'); return }
+    setSavingOutra(true)
+    setOutraError('')
+    try {
+      const nova = await createOutraUnidade({
+        nome: outraNome.trim(),
+        tipo: outraTipo.trim(),
+        endereco: outraEndereco.trim() || null,
+        municipio_id: municipio.id,
+      })
+      setShowOutraForm(false)
+      setOutraNome(''); setOutraTipo(''); setOutraEndereco('')
+      setOutrasUnidades((prev) => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)))
+    } catch {
+      setOutraError('Erro ao salvar. Tente novamente.')
+    } finally {
+      setSavingOutra(false)
+    }
+  }
+
+  async function handleDeleteOutraUnidade(id: string) {
+    setDeletingOutra(true)
+    try {
+      await deleteOutraUnidade(id)
+      setOutrasUnidades((prev) => prev.filter((u) => u.id !== id))
+      setConfirmDeleteOutraId(null)
+    } catch {
+      // silencia FK constraint
+    } finally {
+      setDeletingOutra(false)
+    }
+  }
 
   async function handleCreate() {
     if (!nome.trim()) { setError('Informe o nome da UBS.'); return }
@@ -378,6 +510,139 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
             <p className="text-xs text-gray-400 ml-auto hidden sm:block">Selecione o período antes de lançar dados</p>
           </div>
         </Card>
+
+        {/* Secretarias de Saúde */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Secretarias de Saúde</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {secretarias.length} secretaria{secretarias.length !== 1 ? 's' : ''} cadastrada{secretarias.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+            {!showSecretariaForm && (
+              <Button onClick={() => setShowSecretariaForm(true)} type="button" variant="secondary">
+                <Plus className="w-4 h-4" />
+                Nova Secretaria
+              </Button>
+            )}
+          </div>
+
+          {/* Formulário nova Secretaria */}
+          {showSecretariaForm && (
+            <Card className="mb-4 border-[#004aad]/20 bg-blue-50/30">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-[#004aad] flex items-center justify-center">
+                    <Plus className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-800">Cadastrar Secretaria de Saúde</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Input label="Nome da Secretaria" required value={secNome} onChange={(e) => setSecNome(e.target.value)} placeholder="Ex: Secretaria Municipal de Saúde" />
+                  <Input label="Responsável" value={secResponsavel} onChange={(e) => setSecResponsavel(e.target.value)} placeholder="Nome do secretário(a)" />
+                  <Input label="Telefone" value={secTelefone} onChange={(e) => setSecTelefone(e.target.value)} placeholder="(XX) XXXXX-XXXX" />
+                </div>
+                {secError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{secError}</p>}
+                <div className="flex gap-2 pt-1">
+                  <Button variant="ghost" onClick={() => { setShowSecretariaForm(false); setSecNome(''); setSecResponsavel(''); setSecTelefone(''); setSecError('') }} type="button">Cancelar</Button>
+                  <Button onClick={handleCreateSecretaria} loading={savingSecretaria} type="button">Salvar Secretaria</Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Lista de Secretarias */}
+          {loadingSecretarias ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin w-6 h-6 border-2 border-[#004aad] border-t-transparent rounded-full" />
+                <p className="text-sm text-gray-400">Carregando secretarias...</p>
+              </div>
+            </div>
+          ) : secretarias.length === 0 ? (
+            <Card className="text-center py-10 mb-6">
+              <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-gray-100">
+                <Building2 className="w-6 h-6 text-gray-300" />
+              </div>
+              <p className="text-gray-600 font-semibold">Nenhuma secretaria cadastrada</p>
+              <p className="text-sm text-gray-400 mt-1">Cadastre uma secretaria para vincular UBS</p>
+            </Card>
+          ) : (
+            <div className="grid gap-3 mb-6">
+              {secretarias.map((sec) => {
+                const isConfirmando = confirmDeleteSecId === sec.id
+                return (
+                  <div
+                    key={sec.id}
+                    className={[
+                      'bg-white border rounded-2xl shadow-sm transition-all duration-200',
+                      isConfirmando ? 'border-red-200' : 'border-gray-100 hover:shadow-md',
+                    ].join(' ')}
+                  >
+                    <div className="flex items-center justify-between gap-4 p-5">
+                      <button
+                        type="button"
+                        onClick={() => !isConfirmando && onSelectSecretaria(sec)}
+                        className="flex items-center gap-4 flex-1 min-w-0 text-left group"
+                      >
+                        <div className="w-11 h-11 bg-gradient-to-br from-[#004aad]/10 to-[#004aad]/20 rounded-xl flex items-center justify-center shrink-0">
+                          <Building2 className="w-5 h-5 text-[#004aad]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-gray-900 group-hover:text-[#004aad] transition-colors truncate">{sec.nome}</p>
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                            {sec.responsavel && <p className="text-xs text-gray-500">Resp.: {sec.responsavel}</p>}
+                            {sec.telefone && <p className="text-xs text-gray-500">Tel.: {sec.telefone}</p>}
+                          </div>
+                        </div>
+                      </button>
+
+                      {!isConfirmando && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteSecId(sec.id)}
+                            title="Excluir secretaria"
+                            className="p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onSelectSecretaria(sec)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-[#004aad] text-white text-xs font-semibold rounded-xl hover:bg-[#003080] transition-colors shadow-sm"
+                          >
+                            Gerenciar
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {isConfirmando && (
+                      <div className="px-5 pb-4 pt-3 border-t border-red-100 bg-red-50 rounded-b-2xl">
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <div className="flex items-center gap-2 text-red-700">
+                            <AlertTriangle className="w-4 h-4 shrink-0" />
+                            <p className="text-sm font-medium">Excluir <strong>{sec.nome}</strong>? UBS vinculadas ficarão sem secretaria.</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button type="button" onClick={() => setConfirmDeleteSecId(null)} className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Cancelar</button>
+                            <button type="button" onClick={() => handleDeleteSecretaria(sec.id)} disabled={deletingSec} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors">
+                              {deletingSec ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                              Confirmar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         {/* UBS */}
         <div>
@@ -735,6 +1000,135 @@ export function MunicipioDetalhe({ municipio, onBack, onLancar }: MunicipioDetal
                     {!isConfirmando && (
                       <div className="px-5 pb-4">
                         <HistoricoUBS ubs={ubs} onEditar={(u, m, a) => onLancar(u, m, a)} />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Outras Unidades de Saúde */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Outras Unidades de Saúde</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {outrasUnidades.length} unidade{outrasUnidades.length !== 1 ? 's' : ''} cadastrada{outrasUnidades.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+            {!showOutraForm && (
+              <Button onClick={() => setShowOutraForm(true)} type="button" variant="secondary">
+                <Plus className="w-4 h-4" />
+                Nova Unidade
+              </Button>
+            )}
+          </div>
+
+          {/* Formulário nova Outra Unidade */}
+          {showOutraForm && (
+            <Card className="mb-4 border-orange-200 bg-orange-50/30">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
+                    <Plus className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-800">Cadastrar Outra Unidade de Saúde</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Input label="Nome da Unidade" required value={outraNome} onChange={(e) => setOutraNome(e.target.value)} placeholder="Ex: CAPS, SAMU, Hospital Municipal..." />
+                  <Input label="Tipo" required value={outraTipo} onChange={(e) => setOutraTipo(e.target.value)} placeholder="Ex: CAPS, UPA, Hospital, SAMU..." />
+                  <Input label="Endereço" value={outraEndereco} onChange={(e) => setOutraEndereco(e.target.value)} placeholder="Rua, número, bairro..." />
+                </div>
+                {outraError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{outraError}</p>}
+                <div className="flex gap-2 pt-1">
+                  <Button variant="ghost" onClick={() => { setShowOutraForm(false); setOutraNome(''); setOutraTipo(''); setOutraEndereco(''); setOutraError('') }} type="button">Cancelar</Button>
+                  <Button onClick={handleCreateOutraUnidade} loading={savingOutra} type="button">Salvar Unidade</Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Lista de Outras Unidades */}
+          {loadingOutras ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full" />
+                <p className="text-sm text-gray-400">Carregando unidades...</p>
+              </div>
+            </div>
+          ) : outrasUnidades.length === 0 ? (
+            <Card className="text-center py-10">
+              <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-gray-100">
+                <Building2 className="w-6 h-6 text-gray-300" />
+              </div>
+              <p className="text-gray-600 font-semibold">Nenhuma outra unidade cadastrada</p>
+              <p className="text-sm text-gray-400 mt-1">CAPS, UPA, Hospitais, SAMU e outras unidades</p>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {outrasUnidades.map((unidade) => {
+                const isConfirmando = confirmDeleteOutraId === unidade.id
+                return (
+                  <div
+                    key={unidade.id}
+                    className={[
+                      'bg-white border rounded-2xl shadow-sm transition-all duration-200',
+                      isConfirmando ? 'border-red-200' : 'border-gray-100 hover:shadow-md',
+                    ].join(' ')}
+                  >
+                    <div className="flex items-center justify-between gap-4 p-5">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-11 h-11 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center shrink-0">
+                          <Building2 className="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-gray-900 truncate">{unidade.nome}</p>
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                            <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100">{unidade.tipo}</span>
+                            {unidade.endereco && <p className="text-xs text-gray-500">{unidade.endereco}</p>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {!isConfirmando && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteOutraId(unidade.id)}
+                            title="Excluir unidade"
+                            className="p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onLancarOutraUnidade(unidade, parseInt(mes), parseInt(ano))}
+                            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white text-sm font-semibold rounded-xl hover:bg-orange-600 transition-colors shadow-sm"
+                          >
+                            Lançar dados
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {isConfirmando && (
+                      <div className="px-5 pb-4 pt-3 border-t border-red-100 bg-red-50 rounded-b-2xl">
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <div className="flex items-center gap-2 text-red-700">
+                            <AlertTriangle className="w-4 h-4 shrink-0" />
+                            <p className="text-sm font-medium">Excluir <strong>{unidade.nome}</strong>? Os lançamentos associados serão removidos.</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button type="button" onClick={() => setConfirmDeleteOutraId(null)} className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Cancelar</button>
+                            <button type="button" onClick={() => handleDeleteOutraUnidade(unidade.id)} disabled={deletingOutra} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors">
+                              {deletingOutra ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                              Confirmar
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

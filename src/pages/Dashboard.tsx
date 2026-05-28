@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { KpiCard } from '@/components/dashboard/KpiCard'
 import { ChartCard } from '@/components/dashboard/ChartCard'
 import { KpiExplainModal, type KpiExplain } from '@/components/dashboard/KpiExplainModal'
-import { getDashboardData, type DashboardData } from '@/services/dashboard'
+import { getDashboardData, type DashboardData, type CustoPorUnidade } from '@/services/dashboard'
 import { getMunicipios } from '@/services/municipios'
 import { formatCurrency } from '@/lib/utils'
 import type { Municipio } from '@/types'
@@ -327,8 +327,16 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
     const linha = (label: string, valor: string) =>
       `  ${label.padEnd(30)} ${valor}`
 
-    const ubsCustos = data.custosPorUbs.map((u) =>
+    const ubsCustos = data.custosPorUbs.filter((u) => u.total > 0).map((u) =>
       `  • ${u.nome.padEnd(28)} ${fmtCur(u.total)}`
+    ).join('\n')
+
+    const secCustos = data.custosPorSecretaria.filter((s) => s.total > 0).map((s) =>
+      `  • ${s.nome.padEnd(28)} ${fmtCur(s.total)}`
+    ).join('\n')
+
+    const outrasCustos = data.custosPorOutraUnidade.filter((o) => o.total > 0).map((o) =>
+      `  • ${o.nome.padEnd(28)} ${fmtCur(o.total)}`
     ).join('\n')
 
     const ubsAtend = data.atendimentosPorUbs.map((u) =>
@@ -381,11 +389,25 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
       linha('Administrativo', `${fmtCur(data.custosAdministrativos)}  (${fmtNum(data.pctAdministrativo, 1)}%)`),
       linha('Serv. Terceirizados (empresas)', `${fmtCur(data.custosTerceirizados)}  (${fmtNum(data.pctTerceirizados, 1)}%)`),
       '',
-      ...(data.custosPorUbs.length > 0 ? [
+      ...(data.custosPorUbs.some((u) => u.total > 0) ? [
         sep,
         '  CUSTO TOTAL POR UBS',
         sep,
         ubsCustos,
+        '',
+      ] : []),
+      ...(secCustos ? [
+        sep,
+        '  CUSTO TOTAL POR SECRETARIA DE SAÚDE',
+        sep,
+        secCustos,
+        '',
+      ] : []),
+      ...(outrasCustos ? [
+        sep,
+        '  CUSTO TOTAL POR OUTRAS UNIDADES DE SAÚDE',
+        sep,
+        outrasCustos,
         '',
       ] : []),
       ...(data.atendimentosPorUbs.some((u) => u.total > 0) ? [
@@ -432,7 +454,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
             <div className="flex-1 min-w-0">
               <h1 className="text-lg sm:text-xl font-bold text-gray-900">Bem-vindo(a)!</h1>
               <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                Indicadores de custos e saúde das UBS
+                Indicadores de custos — UBS, Secretarias e Outras Unidades
               </p>
             </div>
 
@@ -556,6 +578,34 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 onClick={() => setExplain(makeExplain('totalUbs'))}
               />
               <KpiCard
+                title="Secretarias"
+                value={String(data.totalSecretarias)}
+                subtitle="de saúde"
+                icon={<Building2 className="w-5 h-5" />}
+                color="indigo"
+                onClick={() => setExplain({
+                  title: 'Secretarias de Saúde',
+                  value: String(data.totalSecretarias),
+                  formula: 'Contagem de secretarias cadastradas no município',
+                  steps: data.secretariasLista.map((s) => ({ label: s.nome, value: '✓' })).concat([{ label: 'Total', value: String(data.totalSecretarias), highlight: true } as { label: string; value: string; highlight?: boolean }]),
+                  note: 'Secretarias de Saúde vinculadas ao município com possibilidade de lançamento de custos próprios.',
+                })}
+              />
+              <KpiCard
+                title="Outras Unidades"
+                value={String(data.totalOutrasUnidades)}
+                subtitle="CAPS, UPA, Hospital..."
+                icon={<Building2 className="w-5 h-5" />}
+                color="orange"
+                onClick={() => setExplain({
+                  title: 'Outras Unidades de Saúde',
+                  value: String(data.totalOutrasUnidades),
+                  formula: 'Contagem de outras unidades cadastradas no município',
+                  steps: data.outrasUnidadesLista.map((o) => ({ label: `${o.nome} (${o.tipo})`, value: '✓' })).concat([{ label: 'Total', value: String(data.totalOutrasUnidades), highlight: true } as { label: string; value: string; highlight?: boolean }]),
+                  note: 'Inclui CAPS, UPA, Hospitais, SAMU e outras unidades de saúde que não são UBS.',
+                })}
+              />
+              <KpiCard
                 title="Total Atendimentos"
                 value={data.totalAtendimentos.toLocaleString('pt-BR')}
                 subtitle={`${MESES_LABEL[data.mes]}/${data.ano}`}
@@ -568,31 +618,15 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 value={String(data.totalFuncionarios)}
                 subtitle="funcionários ativos"
                 icon={<Users className="w-5 h-5" />}
-                color="indigo"
-                onClick={() => setExplain(makeExplain('servidores'))}
-              />
-              <KpiCard
-                title="UBS / 10k hab."
-                value={fmtNum(data.ubsPor10kHab)}
-                subtitle="cobertura territorial"
-                icon={<Building2 className="w-5 h-5" />}
-                color="teal"
-                onClick={() => setExplain(makeExplain('ubsPor10k'))}
-              />
-              <KpiCard
-                title="Serv. / 10k hab."
-                value={fmtNum(data.servidoresPor10kHab)}
-                subtitle="densidade de pessoal"
-                icon={<Users className="w-5 h-5" />}
                 color="purple"
-                onClick={() => setExplain(makeExplain('serv10k'))}
+                onClick={() => setExplain(makeExplain('servidores'))}
               />
               <KpiCard
                 title="Atend. per capita"
                 value={fmtNum(data.atendimentosPerCapita, 3)}
                 subtitle="atend. por habitante"
                 icon={<Activity className="w-5 h-5" />}
-                color="orange"
+                color="teal"
                 onClick={() => setExplain(makeExplain('atendPerCapita'))}
               />
             </div>
@@ -756,26 +790,26 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                 )}
               </ChartCard>
 
-              {/* Barras — Custo por UBS */}
+              {/* Barras — Custo por Unidade (todas) */}
               <ChartCard
-                title="Custo Total por UBS"
-                subtitle="soma de todas as categorias"
+                title="Custo Total por Unidade"
+                subtitle="UBS, Secretarias e Outras Unidades"
                 minHeight="min-h-80"
               >
-                {data.custosPorUbs.some((u) => u.total > 0) ? (
-                  <ResponsiveContainer width="100%" height={Math.max(240, data.custosPorUbs.length * 48)}>
+                {data.custosPorTodasUnidades.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={Math.max(240, data.custosPorTodasUnidades.length * 48)}>
                     <BarChart
-                      data={data.custosPorUbs}
+                      data={data.custosPorTodasUnidades}
                       layout="vertical"
                       margin={{ top: 5, right: 70, left: 8, bottom: 5 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
                       <XAxis type="number" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
-                      <YAxis type="category" dataKey="nome" tick={{ fontSize: 11 }} width={130} />
+                      <YAxis type="category" dataKey="nome" tick={{ fontSize: 11 }} width={150} />
                       <Tooltip content={<TooltipMoeda />} />
                       <Bar dataKey="total" name="Custo Total" radius={[0, 4, 4, 0]}>
-                        {data.custosPorUbs.map((_, i) => (
-                          <Cell key={i} fill={CORES_BARRAS[i % CORES_BARRAS.length]} />
+                        {data.custosPorTodasUnidades.map((u, i) => (
+                          <Cell key={i} fill={u.tipo === 'ubs' ? CORES_BARRAS[i % CORES_BARRAS.length] : u.tipo === 'secretaria' ? '#004aad' : '#f97316'} />
                         ))}
                         <LabelList
                           dataKey="total"
@@ -795,22 +829,22 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
             {/* ── Gráficos Linha 2 ─────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-              {/* Barras empilhadas — Custo por UBS por categoria */}
+              {/* Barras empilhadas — Custo por Unidade por categoria */}
               <ChartCard
-                title="Custo por UBS — Detalhado por Categoria"
+                title="Custo por Unidade — Detalhado por Categoria"
                 subtitle="composição do custo de cada unidade"
                 minHeight="min-h-80"
               >
-                {data.custosPorUbs.some((u) => u.total > 0) ? (
-                  <ResponsiveContainer width="100%" height={Math.max(240, data.custosPorUbs.length * 48)}>
+                {data.custosPorTodasUnidades.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={Math.max(240, data.custosPorTodasUnidades.length * 48)}>
                     <BarChart
-                      data={data.custosPorUbs}
+                      data={data.custosPorTodasUnidades}
                       layout="vertical"
                       margin={{ top: 5, right: 10, left: 8, bottom: 5 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
                       <XAxis type="number" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
-                      <YAxis type="category" dataKey="nome" tick={{ fontSize: 11 }} width={130} />
+                      <YAxis type="category" dataKey="nome" tick={{ fontSize: 11 }} width={150} />
                       <Tooltip content={<TooltipMoeda />} />
                       <Legend formatter={(v) => <span style={{ fontSize: 11, color: '#374151' }}>{v}</span>} />
                       <Bar dataKey="pessoal"        name="Pessoal"           stackId="a" fill="#01884d" />
@@ -1216,11 +1250,13 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                   Totais do período
                 </p>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                     {[
-                      { label: 'UBS',           valor: data.totalUbs,           cor: 'border-[#01884d]/20 bg-[#01884d]/5',    txt: 'text-[#01884d]',   fmt: (v: number) => String(v) },
-                      { label: 'Atendimentos',  valor: data.totalAtendimentos,  cor: 'border-teal-200 bg-teal-50',  txt: 'text-teal-700',  fmt: (v: number) => v.toLocaleString('pt-BR') },
-                      { label: 'Servidores',    valor: data.totalFuncionarios,  cor: 'border-[#004aad]/20 bg-[#004aad]/5', txt: 'text-[#004aad]', fmt: (v: number) => String(v) },
+                      { label: 'UBS',              valor: data.totalUbs,              cor: 'border-[#01884d]/20 bg-[#01884d]/5',    txt: 'text-[#01884d]',   fmt: (v: number) => String(v) },
+                      { label: 'Secretarias',      valor: data.totalSecretarias,      cor: 'border-[#004aad]/20 bg-[#004aad]/5', txt: 'text-[#004aad]', fmt: (v: number) => String(v) },
+                      { label: 'Outras Unid.',     valor: data.totalOutrasUnidades,   cor: 'border-orange-200 bg-orange-50',  txt: 'text-orange-700',  fmt: (v: number) => String(v) },
+                      { label: 'Atendimentos',     valor: data.totalAtendimentos,     cor: 'border-teal-200 bg-teal-50',  txt: 'text-teal-700',  fmt: (v: number) => v.toLocaleString('pt-BR') },
+                      { label: 'Servidores',       valor: data.totalFuncionarios,     cor: 'border-purple-200 bg-purple-50', txt: 'text-purple-700', fmt: (v: number) => String(v) },
                     ].map((item) => (
                       <div key={item.label} className={`rounded-xl border p-4 text-center ${item.cor}`}>
                         <p className="text-xs text-gray-500 mb-1">{item.label}</p>
@@ -1231,8 +1267,10 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                   <ResponsiveContainer width="100%" height={140}>
                     <BarChart
                       data={[
-                        { name: 'UBS',          valor: data.totalUbs,          fill: '#3b82f6' },
-                        { name: 'Servidores',   valor: data.totalFuncionarios, fill: '#6366f1' },
+                        { name: 'UBS',          valor: data.totalUbs,          fill: '#01884d' },
+                        { name: 'Secretarias',  valor: data.totalSecretarias,  fill: '#004aad' },
+                        { name: 'Outras Unid.', valor: data.totalOutrasUnidades, fill: '#f97316' },
+                        { name: 'Servidores',   valor: data.totalFuncionarios, fill: '#8b5cf6' },
                       ]}
                       margin={{ top: 10, right: 20, left: 10, bottom: 5 }}
                     >
@@ -1241,7 +1279,7 @@ export function Dashboard({ onBack: _onBack }: DashboardProps) {
                       <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                       <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }} />
                       <Bar dataKey="valor" name="Total" radius={[4, 4, 0, 0]}>
-                        {[0, 1].map((i) => <Cell key={i} fill={['#01884d','#004aad'][i]} />)}
+                        {[0, 1, 2, 3].map((i) => <Cell key={i} fill={['#01884d','#004aad','#f97316','#8b5cf6'][i]} />)}
                         <LabelList dataKey="valor" position="top" style={{ fontSize: 13, fill: '#374151', fontWeight: 700 }} />
                       </Bar>
                     </BarChart>

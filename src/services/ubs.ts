@@ -11,6 +11,27 @@ export async function getUBSByMunicipio(municipioId: string): Promise<UBS[]> {
   return data ?? []
 }
 
+export async function getUBSBySecretaria(secretariaId: string): Promise<UBS[]> {
+  const { data, error } = await supabase
+    .from('ubs')
+    .select('*')
+    .eq('secretaria_id', secretariaId)
+    .order('nome')
+  if (error) throw error
+  return data ?? []
+}
+
+export async function getUBSSemSecretaria(municipioId: string): Promise<UBS[]> {
+  const { data, error } = await supabase
+    .from('ubs')
+    .select('*')
+    .eq('municipio_id', municipioId)
+    .is('secretaria_id', null)
+    .order('nome')
+  if (error) throw error
+  return data ?? []
+}
+
 export async function getUBS(id: string): Promise<UBS | null> {
   const { data, error } = await supabase
     .from('ubs')

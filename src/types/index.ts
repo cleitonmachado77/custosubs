@@ -8,6 +8,17 @@ export interface Municipio {
   updated_at?: string
 }
 
+// ─── Secretaria de Saúde ──────────────────────────────────────────────────────
+export interface SecretariaSaude {
+  id: string
+  nome: string
+  responsavel?: string | null
+  telefone?: string | null
+  municipio_id: string
+  created_at?: string
+  updated_at?: string
+}
+
 // ─── UBS ─────────────────────────────────────────────────────────────────────
 export interface UBS {
   id: string
@@ -17,6 +28,18 @@ export interface UBS {
   populacao_referencia?: number | null
   num_equipes_esf?: number | null
   servicos?: string[] | null
+  municipio_id: string
+  secretaria_id?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+// ─── Outras Unidades de Saúde ─────────────────────────────────────────────────
+export interface OutraUnidadeSaude {
+  id: string
+  nome: string
+  tipo: string
+  endereco?: string | null
   municipio_id: string
   created_at?: string
   updated_at?: string
