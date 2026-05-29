@@ -22,6 +22,9 @@ IMPORTANTE:
 - O campo "mes" vai de 1 a 12, "ano" é o ano completo (ex: 2025).
 - Vinculos: concursado, clt, terceirizado.
 - Categorias de itens_custo: material_consumo, insumo, administrativo, terceirizado.
+- Os itens de custo são identificados pelo campo "nome" (texto livre). Exemplos: "Conta de água", "Energia elétrica", "Aluguel", "Internet", "Material de limpeza", "Luvas", "Seringas", etc.
+- Para buscar custos específicos como água, energia, aluguel, use ILIKE no campo "nome" da tabela itens_custo. Ex: WHERE nome ILIKE '%água%' ou WHERE nome ILIKE '%energia%'.
+- NUNCA filtre apenas por categoria quando o usuário perguntar sobre um item específico. Use o campo "nome" com ILIKE.
 `
 
 const SYSTEM_PROMPT = `${DB_SCHEMA}
