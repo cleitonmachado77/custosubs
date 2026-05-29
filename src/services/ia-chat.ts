@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
 // Schema do banco para contexto da IA
 const DB_SCHEMA = `
@@ -36,9 +36,9 @@ REGRAS:
 7. Quando for formatar resultados, use linguagem simples, formato de moeda brasileira (R$ X.XXX,XX) e seja conciso.
 `
 
-interface GeminiMessage {
-  role: 'user' | 'model'
-  parts: { text: string }[]
+interface ChatMsg {
+  role: 'system' | 'user' | 'assistant'
+  content: string
 }
 
 export interface ChatMessage {
@@ -49,24 +49,15 @@ export interface ChatMessage {
 
 // Extrai SQL de uma resposta do modelo
 function extractSQL(text: string): string | null {
-  // Tenta capturar bloco completo ```sql ... ```
   const match = text.match(/```sql\s*([\s\S]*?)```/)
-  if (match) {
-    return match[1].trim().replace(/;\s*$/, '')
-  }
-  // Tenta capturar bloco incompleto (sem fechamento ```)
+  if (match) return match[1].trim().replace(/;\s*$/, '')
   const partial = text.match(/```sql\s*([\s\S]+)$/)
   if (partial) {
     const sql = partial[1].trim().replace(/;\s*$/, '')
-    if (sql.toUpperCase().startsWith('SELECT') || sql.toUpperCase().startsWith('WITH')) {
-      return sql
-    }
+    if (sql.toUpperCase().startsWith('SELECT') || sql.toUpperCase().startsWith('WITH')) return sql
   }
-  // Tenta capturar SQL solto (sem bloco de código)
   const loose = text.match(/(SELECT\s+[\s\S]+?FROM\s+[\s\S]+?)(?:\n\n|$)/i)
-  if (loose) {
-    return loose[1].trim().replace(/;\s*$/, '')
-  }
+  if (loose) return loose[1].trim().replace(/;\s*$/, '')
   return null
 }
 
@@ -78,37 +69,34 @@ function isReadOnlySQL(sql: string): boolean {
   return !forbidden.some((cmd) => upper.includes(cmd))
 }
 
-// Executa SQL no Supabase via RPC ou query direta
+// Executa SQL no Supabase via RPC
 async function executeSQL(sql: string): Promise<{ data: unknown[] | null; error: string | null }> {
   try {
     const { data, error } = await supabase.rpc('execute_readonly_query', { query_text: sql })
-    if (error) {
-      // Fallback: tenta via REST se a function não existir
-      return { data: null, error: error.message }
-    }
+    if (error) return { data: null, error: error.message }
     return { data, error: null }
   } catch (e) {
     return { data: null, error: String(e) }
   }
 }
 
-// Chama a API do Gemini
-async function callGemini(messages: GeminiMessage[]): Promise<string> {
-  const response = await fetch(GEMINI_URL, {
+// Chama a API do Groq (formato OpenAI)
+async function callLLM(messages: ChatMsg[]): Promise<string> {
+  const response = await fetch(GROQ_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${GROQ_API_KEY}`,
+    },
     body: JSON.stringify({
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: messages,
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 2048,
-      },
+      model: 'llama-3.3-70b-versatile',
+      messages,
+      temperature: 0.3,
+      max_tokens: 2048,
     }),
   })
 
   if (!response.ok) {
-    await response.text()
     if (response.status === 429) {
       throw new Error('Limite de requisições atingido. Aguarde alguns segundos e tente novamente.')
     }
@@ -119,97 +107,74 @@ async function callGemini(messages: GeminiMessage[]): Promise<string> {
   }
 
   const result = await response.json()
-  return result.candidates?.[0]?.content?.parts?.[0]?.text ?? 'Sem resposta do modelo.'
+  return result.choices?.[0]?.message?.content ?? 'Sem resposta do modelo.'
 }
 
 // Função principal: processa uma pergunta do usuário
-export async function askIA(
-  userQuestion: string,
-  conversationHistory: GeminiMessage[] = []
-): Promise<{ answer: string; sqlUsed?: string }> {
-  // 1. Envia a pergunta para o Gemini com o histórico
-  const messages: GeminiMessage[] = [
-    ...conversationHistory,
-    { role: 'user', parts: [{ text: userQuestion }] },
+export async function askIA(userQuestion: string): Promise<{ answer: string; sqlUsed?: string }> {
+  // 1. Pede para o modelo gerar SQL ou responder diretamente
+  const messages: ChatMsg[] = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: userQuestion },
   ]
 
-  const firstResponse = await callGemini(messages)
+  const firstResponse = await callLLM(messages)
 
   // 2. Verifica se o modelo gerou SQL
   const sql = extractSQL(firstResponse)
 
   if (!sql) {
-    // Sem SQL — resposta direta, mas limpa qualquer resquício técnico
-    const cleanResponse = firstResponse
+    // Sem SQL — limpa resquícios técnicos e retorna
+    const clean = firstResponse
       .replace(/```sql[\s\S]*/g, '')
       .replace(/```[\s\S]*?```/g, '')
       .replace(/SELECT\s+[\s\S]*?FROM[\s\S]*?(?:WHERE|GROUP|ORDER|LIMIT|$)/gi, '')
       .replace(/\b(ubs_id|municipio_id|secretaria_id|created_at|updated_at)\b/gi, '')
       .trim()
-    return { answer: cleanResponse || 'Pode reformular sua pergunta? Preciso de mais detalhes para buscar os dados.' }
+    return { answer: clean || 'Pode reformular sua pergunta? Preciso de mais detalhes para buscar os dados.' }
   }
 
-  // 3. Valida segurança do SQL
+  // 3. Valida segurança
   if (!isReadOnlySQL(sql)) {
-    return {
-      answer: 'Desculpe, não posso executar esse tipo de operação. Apenas consultas de leitura são permitidas.',
-    }
+    return { answer: 'Desculpe, não posso executar esse tipo de operação. Apenas consultas de leitura são permitidas.' }
   }
 
-  // 4. Executa o SQL no banco
+  // 4. Executa o SQL
   const { data, error } = await executeSQL(sql)
 
   if (error) {
-    // Se deu erro, pede para o modelo reformular
-    const retryMessages: GeminiMessage[] = [
-      ...messages,
-      { role: 'model', parts: [{ text: firstResponse }] },
-      {
-        role: 'user',
-        parts: [{ text: `A query retornou erro: "${error}". Por favor, corrija a query SQL e tente novamente. Lembre-se que as tabelas são: municipios, ubs, secretarias_saude, outras_unidades_saude, funcionarios, producao_eventos, itens_custo.` }],
-      },
+    // Tenta corrigir
+    const retryMessages: ChatMsg[] = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userQuestion },
+      { role: 'assistant', content: firstResponse },
+      { role: 'user', content: `A query retornou erro: "${error}". Corrija o SQL. Retorne SOMENTE o bloco \`\`\`sql ... \`\`\` corrigido.` },
     ]
-
-    const retryResponse = await callGemini(retryMessages)
+    const retryResponse = await callLLM(retryMessages)
     const retrySql = extractSQL(retryResponse)
 
     if (retrySql && isReadOnlySQL(retrySql)) {
       const retry = await executeSQL(retrySql)
       if (retry.error) {
-        return {
-          answer: 'Não consegui encontrar esses dados no momento. Tente reformular sua pergunta com mais detalhes (ex: nome do município, período, etc).',
-          sqlUsed: retrySql,
-        }
+        return { answer: 'Não consegui encontrar esses dados. Tente reformular com mais detalhes (município, período, nome da UBS).', sqlUsed: retrySql }
       }
-      // Pede para formatar o resultado
-      const formatMessages: GeminiMessage[] = [
-        ...messages,
-        { role: 'model', parts: [{ text: retryResponse }] },
-        {
-          role: 'user',
-          parts: [{ text: `Resultado da consulta:\n${JSON.stringify(retry.data, null, 2)}\n\nAgora responda a pergunta original do usuário de forma clara e amigável em português. NUNCA mostre SQL ou termos técnicos. Use R$ para valores monetários. Seja conciso.` }],
-        },
+      // Formata resultado
+      const fmtMessages: ChatMsg[] = [
+        { role: 'system', content: 'Você é um assistente que responde em português brasileiro. NUNCA mostre SQL, nomes de tabelas ou termos técnicos. Use R$ para valores monetários. Seja conciso e use listas quando apropriado.' },
+        { role: 'user', content: `Pergunta do usuário: "${userQuestion}"\n\nDados encontrados:\n${JSON.stringify(retry.data, null, 2)}\n\nResponda de forma clara e amigável.` },
       ]
-      const finalAnswer = await callGemini(formatMessages)
+      const finalAnswer = await callLLM(fmtMessages)
       return { answer: finalAnswer, sqlUsed: retrySql }
     }
-
-    return {
-      answer: 'Não consegui encontrar esses dados. Tente ser mais específico (ex: informe o município, período ou nome da UBS).',
-      sqlUsed: sql,
-    }
+    return { answer: 'Não consegui encontrar esses dados. Tente ser mais específico (município, período ou nome da UBS).', sqlUsed: sql }
   }
 
-  // 5. Envia os resultados para o modelo formatar a resposta
-  const formatMessages: GeminiMessage[] = [
-    ...messages,
-    { role: 'model', parts: [{ text: firstResponse }] },
-    {
-      role: 'user',
-      parts: [{ text: `Resultado da consulta:\n${JSON.stringify(data, null, 2)}\n\nAgora responda a pergunta original do usuário de forma clara e amigável em português. REGRAS OBRIGATÓRIAS:\n- NUNCA mostre SQL, nomes de tabelas, colunas ou termos técnicos\n- Use formato de moeda brasileira (R$ X.XXX,XX) para valores\n- Seja conciso e direto\n- Use listas com bullet points quando houver múltiplos itens\n- Se não houver dados, diga que não foram encontrados registros` }],
-    },
+  // 5. Formata a resposta final
+  const formatMessages: ChatMsg[] = [
+    { role: 'system', content: 'Você é um assistente que responde em português brasileiro. NUNCA mostre SQL, nomes de tabelas ou termos técnicos. Use formato de moeda brasileira (R$ X.XXX,XX) para valores. Seja conciso e direto. Use listas com bullet points quando houver múltiplos itens. Se não houver dados, diga que não foram encontrados registros.' },
+    { role: 'user', content: `Pergunta do usuário: "${userQuestion}"\n\nDados encontrados:\n${JSON.stringify(data, null, 2)}\n\nResponda de forma clara e amigável.` },
   ]
 
-  const finalAnswer = await callGemini(formatMessages)
+  const finalAnswer = await callLLM(formatMessages)
   return { answer: finalAnswer, sqlUsed: sql }
 }
