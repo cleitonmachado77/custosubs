@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, X, Bot, User, Loader2, Sparkles, Trash2 } from 'lucide-react'
-import { askIA, type ChatMessage } from '@/services/ia-chat'
+import { askIA, loadContextSnapshot, type ChatMessage } from '@/services/ia-chat'
 
 export function ChatIA() {
   const [open, setOpen] = useState(false)
@@ -15,7 +15,11 @@ export function ChatIA() {
   }, [messages])
 
   useEffect(() => {
-    if (open) inputRef.current?.focus()
+    if (open) {
+      inputRef.current?.focus()
+      // Pré-carrega o contexto do banco quando abre o chat
+      loadContextSnapshot()
+    }
   }, [open])
 
   async function handleSend() {

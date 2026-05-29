@@ -22,21 +22,9 @@ IMPORTANTE:
 - O campo "mes" vai de 1 a 12, "ano" é o ano completo (ex: 2025).
 - Vinculos: concursado, clt, terceirizado.
 - Categorias de itens_custo: material_consumo, insumo, administrativo, terceirizado.
-- Os itens de custo são identificados pelo campo "nome" (texto livre). Exemplos: "Conta de água", "Energia elétrica", "Aluguel", "Internet", "Material de limpeza", "Luvas", "Seringas", etc.
+- Os itens de custo são identificados pelo campo "nome" (texto livre).
 - Para buscar custos específicos como água, energia, aluguel, use ILIKE no campo "nome" da tabela itens_custo. Ex: WHERE nome ILIKE '%água%' ou WHERE nome ILIKE '%energia%'.
 - NUNCA filtre apenas por categoria quando o usuário perguntar sobre um item específico. Use o campo "nome" com ILIKE.
-`
-
-const SYSTEM_PROMPT = `${DB_SCHEMA}
-
-REGRAS:
-1. Quando o usuário fizer uma pergunta sobre custos, dados ou indicadores, gere APENAS o SQL necessário dentro de um bloco \`\`\`sql ... \`\`\`.
-2. NÃO inclua explicações, comentários ou texto antes ou depois do bloco SQL. Retorne SOMENTE o bloco SQL.
-3. Use APENAS SELECT. NUNCA gere INSERT, UPDATE, DELETE, DROP, ALTER ou qualquer comando que modifique dados.
-4. Se a pergunta não for sobre dados do banco (ex: saudação, pergunta conceitual), responda normalmente em português sem SQL.
-5. Se precisar de mais informações para gerar a query (ex: qual município), pergunte de forma curta e direta SEM gerar SQL.
-6. NUNCA mostre código SQL, nomes de tabelas, colunas ou termos técnicos na resposta final ao usuário.
-7. Quando for formatar resultados, use linguagem simples, formato de moeda brasileira (R$ X.XXX,XX) e seja conciso.
 `
 
 interface ChatMsg {
@@ -50,7 +38,90 @@ export interface ChatMessage {
   timestamp: Date
 }
 
-// Extrai SQL de uma resposta do modelo
+// ─── Context Snapshot ─────────────────────────────────────────────────────────
+// Carrega um resumo dos dados existentes no banco para dar contexto à IA
+
+let cachedSnapshot: string | null = null
+let snapshotTimestamp = 0
+const SNAPSHOT_TTL = 5 * 60 * 1000 // 5 minutos de cache
+
+export async function loadContextSnapshot(): Promise<string> {
+  const now = Date.now()
+  if (cachedSnapshot && (now - snapshotTimestamp) < SNAPSHOT_TTL) {
+    return cachedSnapshot
+  }
+
+  try {
+    const [municipios, ubs, itensNomes, cargos, periodos, outrasUnidades, secretarias] = await Promise.all([
+      supabase.from('municipios').select('nome, estado, habitantes').order('nome'),
+      supabase.from('ubs').select('nome, municipio_id, municipios(nome)').order('nome'),
+      supabase.rpc('execute_readonly_query', { query_text: "SELECT DISTINCT nome FROM itens_custo ORDER BY nome" }),
+      supabase.rpc('execute_readonly_query', { query_text: "SELECT DISTINCT cargo FROM funcionarios ORDER BY cargo" }),
+      supabase.rpc('execute_readonly_query', { query_text: "SELECT DISTINCT mes, ano FROM funcionarios ORDER BY ano DESC, mes DESC LIMIT 12" }),
+      supabase.from('outras_unidades_saude').select('nome, tipo, municipio_id, municipios(nome)').order('nome'),
+      supabase.from('secretarias_saude').select('nome, municipio_id, municipios(nome)').order('nome'),
+    ])
+
+    const munList = (municipios.data ?? []).map((m: { nome: string; estado: string; habitantes: number }) =>
+      `• ${m.nome} (${m.estado}, ${m.habitantes?.toLocaleString('pt-BR')} hab.)`
+    ).join('\n')
+
+    const ubsList = (ubs.data ?? []).map((u: any) =>
+      `• ${u.nome} — ${u.municipios?.nome ?? 'N/A'}`
+    ).join('\n')
+
+    const itensArr = (itensNomes.data ?? []) as { nome: string }[]
+    const itensList = itensArr.map((i) => i.nome).join(', ')
+
+    const cargosArr = (cargos.data ?? []) as { cargo: string }[]
+    const cargosList = cargosArr.map((c) => c.cargo).join(', ')
+
+    const periodosArr = (periodos.data ?? []) as { mes: number; ano: number }[]
+    const MESES_NOME = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+    const periodosList = periodosArr.map((p) => `${MESES_NOME[p.mes]}/${p.ano}`).join(', ')
+
+    const outrasArr = (outrasUnidades.data ?? []).map((o: any) =>
+      `• ${o.nome} (${o.tipo}) — ${o.municipios?.nome ?? 'N/A'}`
+    ).join('\n')
+
+    const secArr = (secretarias.data ?? []).map((s: any) =>
+      `• ${s.nome} — ${s.municipios?.nome ?? 'N/A'}`
+    ).join('\n')
+
+    cachedSnapshot = `
+DADOS EXISTENTES NO BANCO (use para gerar queries precisas):
+
+MUNICÍPIOS CADASTRADOS:
+${munList || '(nenhum)'}
+
+UBS CADASTRADAS:
+${ubsList || '(nenhuma)'}
+
+SECRETARIAS DE SAÚDE:
+${secArr || '(nenhuma)'}
+
+OUTRAS UNIDADES DE SAÚDE:
+${outrasArr || '(nenhuma)'}
+
+NOMES DE ITENS DE CUSTO EXISTENTES:
+${itensList || '(nenhum)'}
+
+CARGOS DE FUNCIONÁRIOS EXISTENTES:
+${cargosList || '(nenhum)'}
+
+PERÍODOS COM DADOS LANÇADOS:
+${periodosList || '(nenhum)'}
+`.trim()
+
+    snapshotTimestamp = now
+    return cachedSnapshot
+  } catch {
+    return '(Não foi possível carregar o resumo dos dados)'
+  }
+}
+
+// ─── Funções auxiliares ───────────────────────────────────────────────────────
+
 function extractSQL(text: string): string | null {
   const match = text.match(/```sql\s*([\s\S]*?)```/)
   if (match) return match[1].trim().replace(/;\s*$/, '')
@@ -64,7 +135,6 @@ function extractSQL(text: string): string | null {
   return null
 }
 
-// Valida que o SQL é apenas SELECT
 function isReadOnlySQL(sql: string): boolean {
   const upper = sql.toUpperCase().trim()
   if (!upper.startsWith('SELECT') && !upper.startsWith('WITH')) return false
@@ -72,7 +142,6 @@ function isReadOnlySQL(sql: string): boolean {
   return !forbidden.some((cmd) => upper.includes(cmd))
 }
 
-// Executa SQL no Supabase via RPC
 async function executeSQL(sql: string): Promise<{ data: unknown[] | null; error: string | null }> {
   try {
     const { data, error } = await supabase.rpc('execute_readonly_query', { query_text: sql })
@@ -83,7 +152,6 @@ async function executeSQL(sql: string): Promise<{ data: unknown[] | null; error:
   }
 }
 
-// Chama a API do Groq (formato OpenAI)
 async function callLLM(messages: ChatMsg[]): Promise<string> {
   const response = await fetch(GROQ_URL, {
     method: 'POST',
@@ -100,12 +168,8 @@ async function callLLM(messages: ChatMsg[]): Promise<string> {
   })
 
   if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error('Limite de requisições atingido. Aguarde alguns segundos e tente novamente.')
-    }
-    if (response.status === 503) {
-      throw new Error('O serviço de IA está temporariamente sobrecarregado. Tente novamente em alguns segundos.')
-    }
+    if (response.status === 429) throw new Error('Limite de requisições atingido. Aguarde alguns segundos e tente novamente.')
+    if (response.status === 503) throw new Error('O serviço de IA está temporariamente sobrecarregado. Tente novamente em alguns segundos.')
     throw new Error('Não foi possível processar sua pergunta no momento. Tente novamente.')
   }
 
@@ -113,21 +177,37 @@ async function callLLM(messages: ChatMsg[]): Promise<string> {
   return result.choices?.[0]?.message?.content ?? 'Sem resposta do modelo.'
 }
 
-// Função principal: processa uma pergunta do usuário
+// ─── Função principal ─────────────────────────────────────────────────────────
+
+const RULES = `
+REGRAS:
+1. Quando o usuário fizer uma pergunta sobre custos, dados ou indicadores, gere APENAS o SQL necessário dentro de um bloco \`\`\`sql ... \`\`\`.
+2. NÃO inclua explicações ou texto antes/depois do bloco SQL. Retorne SOMENTE o bloco SQL.
+3. Use APENAS SELECT. NUNCA gere INSERT, UPDATE, DELETE, DROP, ALTER.
+4. Se a pergunta não for sobre dados do banco, responda normalmente em português sem SQL.
+5. Se precisar de mais informações, pergunte de forma curta SEM gerar SQL.
+6. NUNCA mostre SQL, nomes de tabelas ou termos técnicos ao usuário.
+7. Use os DADOS EXISTENTES NO BANCO acima para saber exatamente quais municípios, UBS, itens e cargos existem. Use os nomes EXATOS dos itens de custo nas queries com ILIKE.
+`
+
 export async function askIA(userQuestion: string): Promise<{ answer: string; sqlUsed?: string }> {
+  // Carrega contexto dos dados existentes
+  const snapshot = await loadContextSnapshot()
+
+  const systemPrompt = `${DB_SCHEMA}\n${snapshot}\n${RULES}`
+
   // 1. Pede para o modelo gerar SQL ou responder diretamente
   const messages: ChatMsg[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt },
     { role: 'user', content: userQuestion },
   ]
 
   const firstResponse = await callLLM(messages)
 
-  // 2. Verifica se o modelo gerou SQL
+  // 2. Verifica se gerou SQL
   const sql = extractSQL(firstResponse)
 
   if (!sql) {
-    // Sem SQL — limpa resquícios técnicos e retorna
     const clean = firstResponse
       .replace(/```sql[\s\S]*/g, '')
       .replace(/```[\s\S]*?```/g, '')
@@ -139,7 +219,7 @@ export async function askIA(userQuestion: string): Promise<{ answer: string; sql
 
   // 3. Valida segurança
   if (!isReadOnlySQL(sql)) {
-    return { answer: 'Desculpe, não posso executar esse tipo de operação. Apenas consultas de leitura são permitidas.' }
+    return { answer: 'Desculpe, não posso executar esse tipo de operação.' }
   }
 
   // 4. Executa o SQL
@@ -148,10 +228,10 @@ export async function askIA(userQuestion: string): Promise<{ answer: string; sql
   if (error) {
     // Tenta corrigir
     const retryMessages: ChatMsg[] = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: systemPrompt },
       { role: 'user', content: userQuestion },
       { role: 'assistant', content: firstResponse },
-      { role: 'user', content: `A query retornou erro: "${error}". Corrija o SQL. Retorne SOMENTE o bloco \`\`\`sql ... \`\`\` corrigido.` },
+      { role: 'user', content: `Erro: "${error}". Corrija o SQL. Retorne SOMENTE o bloco \`\`\`sql ... \`\`\` corrigido.` },
     ]
     const retryResponse = await callLLM(retryMessages)
     const retrySql = extractSQL(retryResponse)
@@ -159,25 +239,22 @@ export async function askIA(userQuestion: string): Promise<{ answer: string; sql
     if (retrySql && isReadOnlySQL(retrySql)) {
       const retry = await executeSQL(retrySql)
       if (retry.error) {
-        return { answer: 'Não consegui encontrar esses dados. Tente reformular com mais detalhes (município, período, nome da UBS).', sqlUsed: retrySql }
+        return { answer: 'Não consegui encontrar esses dados. Tente reformular com mais detalhes.', sqlUsed: retrySql }
       }
-      // Formata resultado
       const fmtMessages: ChatMsg[] = [
-        { role: 'system', content: 'Você é um assistente que responde em português brasileiro. NUNCA mostre SQL, nomes de tabelas ou termos técnicos. Use R$ para valores monetários. Seja conciso e use listas quando apropriado.' },
-        { role: 'user', content: `Pergunta do usuário: "${userQuestion}"\n\nDados encontrados:\n${JSON.stringify(retry.data, null, 2)}\n\nResponda de forma clara e amigável.` },
+        { role: 'system', content: 'Responda em português brasileiro. NUNCA mostre SQL ou termos técnicos. Use R$ para valores. Seja conciso.' },
+        { role: 'user', content: `Pergunta: "${userQuestion}"\nDados:\n${JSON.stringify(retry.data, null, 2)}\nResponda de forma clara.` },
       ]
-      const finalAnswer = await callLLM(fmtMessages)
-      return { answer: finalAnswer, sqlUsed: retrySql }
+      return { answer: await callLLM(fmtMessages), sqlUsed: retrySql }
     }
-    return { answer: 'Não consegui encontrar esses dados. Tente ser mais específico (município, período ou nome da UBS).', sqlUsed: sql }
+    return { answer: 'Não consegui encontrar esses dados. Tente ser mais específico.', sqlUsed: sql }
   }
 
-  // 5. Formata a resposta final
+  // 5. Formata a resposta
   const formatMessages: ChatMsg[] = [
-    { role: 'system', content: 'Você é um assistente que responde em português brasileiro. NUNCA mostre SQL, nomes de tabelas ou termos técnicos. Use formato de moeda brasileira (R$ X.XXX,XX) para valores. Seja conciso e direto. Use listas com bullet points quando houver múltiplos itens. Se não houver dados, diga que não foram encontrados registros.' },
-    { role: 'user', content: `Pergunta do usuário: "${userQuestion}"\n\nDados encontrados:\n${JSON.stringify(data, null, 2)}\n\nResponda de forma clara e amigável.` },
+    { role: 'system', content: 'Responda em português brasileiro. NUNCA mostre SQL, nomes de tabelas ou termos técnicos. Use R$ X.XXX,XX para valores. Seja conciso. Use listas quando houver múltiplos itens. Se dados vazios, diga que não há registros.' },
+    { role: 'user', content: `Pergunta: "${userQuestion}"\nDados:\n${JSON.stringify(data, null, 2)}\nResponda de forma clara e amigável.` },
   ]
 
-  const finalAnswer = await callLLM(formatMessages)
-  return { answer: finalAnswer, sqlUsed: sql }
+  return { answer: await callLLM(formatMessages), sqlUsed: sql }
 }
